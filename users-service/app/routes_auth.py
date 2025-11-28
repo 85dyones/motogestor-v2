@@ -1,80 +1,69 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import (
-    create_access_token,
-    get_jwt_identity,
-    jwt_required,
-)
+from flask_jwt_extended import get_jwt_identity, get_jwt, jwt_required
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .models import db, User, Tenant
+from .identity import build_token
+from .schemas import AuthResponse, AuthUser, LoginRequest, RegisterRequest
+from .errors import ConflictError, NotFoundError, ValidationError
 
 bp = Blueprint("auth_routes", __name__)
 
 
 @bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json() or {}
-    email = data.get("email")
-    password = data.get("password")
+    try:
+        payload = LoginRequest.model_validate(request.get_json() or {})
+    except Exception as e:
+        raise ValidationError("Email e senha são obrigatórios.", {"error": str(e)})
 
-    if not email or not password:
-        return jsonify({"msg": "Email e senha são obrigatórios."}), 400
-
-    user = User.query.filter_by(email=email).first()
-    if not user or not check_password_hash(user.password_hash, password):
-        return jsonify({"msg": "Credenciais inválidas."}), 401
+    user = User.query.filter_by(email=payload.email).first()
+    if not user or not check_password_hash(user.password_hash, payload.password):
+        raise ValidationError("Credenciais inválidas.")
 
     tenant = user.tenant
 
-    access_token = create_access_token(
+    access_token = build_token(
         identity=user.id,
-        additional_claims={
-            "tenant_id": user.tenant_id,
-            "plan": user.plan or tenant.plan if tenant else "BASIC",
-        },
+        tenant_id=user.tenant_id,
+        plan=user.plan or tenant.plan if tenant else "BASIC",
+        tenant_name=tenant.name if tenant else None,
     )
 
-    return (
-        jsonify(
-            {
-                "access_token": access_token,
-                "user": {
-                    "id": user.id,
-                    "name": user.name,
-                    "email": user.email,
-                    "tenant_id": user.tenant_id,
-                    "tenant_name": tenant.name if tenant else None,
-                    "plan": user.plan or (tenant.plan if tenant else "BASIC"),
-                },
-            }
+    response = AuthResponse(
+        access_token=access_token,
+        user=AuthUser(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            tenant_id=user.tenant_id,
+            tenant_name=tenant.name if tenant else None,
+            plan=user.plan or (tenant.plan if tenant else "BASIC"),
+            role=user.role,
         ),
-        200,
     )
+
+    return jsonify(response.model_dump()), 200
 
 
 @bp.route("/register", methods=["POST"])
 def register():
-    data = request.get_json() or {}
+    try:
+        payload = RegisterRequest.model_validate(request.get_json() or {})
+    except Exception as e:
+        raise ValidationError("Dados de cadastro inválidos.", {"error": str(e)})
 
-    name = data.get("name")
-    email = data.get("email")
-    password = data.get("password")
-    tenant_name = data.get("tenant_name", "Nova Oficina")
+    if User.query.filter_by(email=payload.email).first():
+        raise ConflictError("Email já está em uso.")
 
-    if not all([name, email, password]):
-        return jsonify({"msg": "Nome, email e senha são obrigatórios."}), 400
-
-    if User.query.filter_by(email=email).first():
-        return jsonify({"msg": "Email já está em uso."}), 409
-
-    tenant = Tenant(name=tenant_name)
+    tenant = Tenant(name=payload.tenant_name)
     db.session.add(tenant)
     db.session.flush()  # garante tenant.id
 
     user = User(
-        name=name,
-        email=email,
-        password_hash=generate_password_hash(password),
+        name=payload.name,
+        email=payload.email,
+        password_hash=generate_password_hash(payload.password),
         tenant_id=tenant.id,
         role="OWNER",
         plan="BASIC",
@@ -99,9 +88,13 @@ def register():
 @jwt_required()
 def me():
     user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"msg": "Usuário não encontrado."}), 404
+    user_id = int(user_id) if user_id is not None else None
+    user = db.session.get(User, user_id)
+    token_claims = get_jwt()
+    token_tenant_id = token_claims.get("tenant_id") if token_claims else None
+
+    if not user or (token_tenant_id and user.tenant_id != token_tenant_id):
+        raise NotFoundError("Usuário não encontrado para o tenant atual.")
 
     tenant = user.tenant
 

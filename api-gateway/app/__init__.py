@@ -5,22 +5,22 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 import requests
 
-from .config import (
-    FRONTEND_DIST_PATH,
-    MANAGEMENT_SERVICE_URL,
-    FINANCIAL_SERVICE_URL,
-    TEAMCRM_SERVICE_URL,
-)
+from .config import load_config
+from .identity import extract_tenant_context
+from .logging_setup import setup_logging
 from .routes_auth import bp as auth_bp
 from .routes_services import bp as services_bp
 
 
 def create_app():
+    setup_logging()
+    cfg = load_config()
+
     app = Flask(__name__)
 
     # JWT (deve usar o MESMO segredo dos outros serviços)
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret")
-    app.config["ENV"] = os.getenv("APP_ENV", "development")
+    app.config["JWT_SECRET_KEY"] = cfg.jwt_secret_key
+    app.config["ENV"] = cfg.app_env
 
     # CORS liberado pro frontend (ajusta depois se quiser fechar)
     CORS(app, supports_credentials=True)
@@ -103,8 +103,8 @@ def create_app():
           "tenant_name": "Oficina X"
         }
         """
-        identity = get_jwt_identity() or {}
-        plan = (identity.get("plan") or "BASIC").upper()
+        identity = extract_tenant_context(get_jwt_identity() or {})
+        plan = identity.get("plan", "BASIC")
         tenant_name = identity.get("tenant_name")
 
         available_plans = ["BASIC", "PRO", "ENTERPRISE"]
@@ -152,7 +152,7 @@ def create_app():
         # OS (management-service)
         try:
             resp_os = requests.get(
-                MANAGEMENT_SERVICE_URL.rstrip("/") + "/os",
+                cfg.management_service_url.rstrip("/") + "/os",
                 headers=headers,
                 timeout=5,
             )
@@ -176,7 +176,7 @@ def create_app():
         # Recebíveis pendentes (financial-service)
         try:
             resp_rec = requests.get(
-                FINANCIAL_SERVICE_URL.rstrip("/") + "/receivables",
+                cfg.financial_service_url.rstrip("/") + "/receivables",
                 headers=headers,
                 params={"status": "PENDING"},
                 timeout=5,
@@ -197,7 +197,7 @@ def create_app():
         # Tarefas abertas (teamcrm-service)
         try:
             resp_tasks = requests.get(
-                TEAMCRM_SERVICE_URL.rstrip("/") + "/tasks",
+                cfg.teamcrm_service_url.rstrip("/") + "/tasks",
                 headers=headers,
                 params={"only_open": "1"},
                 timeout=5,
@@ -216,7 +216,7 @@ def create_app():
 
     # ---------- Frontend estático (React/Vite) ----------
 
-    app.config["FRONTEND_DIST_PATH"] = FRONTEND_DIST_PATH
+    app.config["FRONTEND_DIST_PATH"] = cfg.frontend_dist_path
 
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")

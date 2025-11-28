@@ -1,14 +1,10 @@
 # api-gateway/app/routes_services.py
 from flask import Blueprint
-from .config import (
-    MANAGEMENT_SERVICE_URL,
-    FINANCIAL_SERVICE_URL,
-    TEAMCRM_SERVICE_URL,
-    AI_SERVICE_URL,
-)
+from .config import load_config
 from .proxy import forward_request
 
 bp = Blueprint("services_proxy", __name__)
+cfg = load_config()
 
 ALL_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
@@ -21,7 +17,7 @@ def management_proxy(path: str):
     /management/customers -> management-service /customers
     /management/os/123    -> management-service /os/123
     """
-    return forward_request(MANAGEMENT_SERVICE_URL, path)
+    return forward_request(cfg.management_service_url, path)
 
 
 # FINANCIAL: /financial/... -> financial-service
@@ -32,7 +28,7 @@ def financial_proxy(path: str):
     /financial/receivables -> financial-service /receivables
     /financial/payables    -> financial-service /payables
     """
-    return forward_request(FINANCIAL_SERVICE_URL, path)
+    return forward_request(cfg.financial_service_url, path)
 
 
 # TEAMCRM: /teamcrm/... -> teamcrm-service
@@ -43,7 +39,7 @@ def teamcrm_proxy(path: str):
     /teamcrm/staff -> teamcrm-service /staff
     /teamcrm/tasks -> teamcrm-service /tasks
     """
-    return forward_request(TEAMCRM_SERVICE_URL, path)
+    return forward_request(cfg.teamcrm_service_url, path)
 
 
 # AI: /ai/... -> ai-service /ai/...
@@ -55,4 +51,4 @@ def ai_proxy(path: str):
     Internamente: ai-service /ai/whatsapp/generate-message
     """
     subpath = f"ai/{path}" if path else "ai"
-    return forward_request(AI_SERVICE_URL, subpath)
+    return forward_request(cfg.ai_service_url, subpath)
