@@ -1,7 +1,9 @@
 # teamcrm-service/app/__init__.py
 import os
+
 from flask import Flask
 from flask_jwt_extended import JWTManager
+
 from .models import db
 
 
@@ -21,10 +23,10 @@ def create_app():
     db.init_app(app)
     jwt = JWTManager(app)  # noqa: F841
 
+    from .routes_dashboard import bp as dash_bp
+    from .routes_interactions import bp as inter_bp
     from .routes_staff import bp as staff_bp
     from .routes_tasks import bp as tasks_bp
-    from .routes_interactions import bp as inter_bp
-    from .routes_dashboard import bp as dash_bp
 
     app.register_blueprint(staff_bp, url_prefix="/staff")
     app.register_blueprint(tasks_bp, url_prefix="/tasks")

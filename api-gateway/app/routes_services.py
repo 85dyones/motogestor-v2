@@ -1,5 +1,6 @@
 # api-gateway/app/routes_services.py
 from flask import Blueprint
+
 from .config import load_config
 from .proxy import forward_request
 

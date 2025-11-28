@@ -1,4 +1,5 @@
 """Structured logging configuration for the users-service."""
+
 import json
 import logging
 import os

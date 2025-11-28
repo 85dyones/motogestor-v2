@@ -1,4 +1,5 @@
 """Tenant scoping utilities to guarantee multi-tenant isolation at query level."""
+
 from __future__ import annotations
 
 from contextlib import contextmanager

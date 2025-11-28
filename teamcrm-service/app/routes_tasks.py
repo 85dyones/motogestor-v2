@@ -1,8 +1,10 @@
 # teamcrm-service/app/routes_tasks.py
 from datetime import date, datetime
-from flask import Blueprint, request, jsonify
+
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, Task, Staff
+
+from .models import Staff, Task, db
 from .utils import get_current_tenant_id, is_manager_or_owner
 
 bp = Blueprint("tasks", __name__)
@@ -32,7 +34,9 @@ def list_tasks():
     if only_open:
         query = query.filter(Task.status.in_(["OPEN", "IN_PROGRESS", "WAITING"]))
 
-    tasks = query.order_by(Task.due_date.asc().nulls_last(), Task.created_at.desc()).all()
+    tasks = query.order_by(
+        Task.due_date.asc().nulls_last(), Task.created_at.desc()
+    ).all()
 
     return jsonify(
         [
@@ -57,7 +61,9 @@ def list_tasks():
 @jwt_required()
 def get_task(task_id):
     tenant_id = get_current_tenant_id()
-    t = Task.query.filter_by(id=task_id, tenant_id=tenant_id).first_or_404()
+    t = db.session.get(Task, task_id)
+    if not t or t.tenant_id != tenant_id:
+        abort(404)
 
     return jsonify(
         {
@@ -138,17 +144,26 @@ def update_task(task_id):
 
     # Edição geral: dono/gerente; o próprio responsável pode mexer no status
     # mas pra simplificar, vamos exigir PERMISSÃO só em mudanças sensíveis.
-    t = Task.query.filter_by(id=task_id, tenant_id=tenant_id).first_or_404()
+    t = db.session.get(Task, task_id)
+    if not t or t.tenant_id != tenant_id:
+        abort(404)
 
     # Controles básicos de permissão
     change_assignment = any(
         key in data for key in ("assigned_to_id", "customer_id", "related_order_id")
     )
-    change_title_scope = any(key in data for key in ("title", "description", "priority"))
+    change_title_scope = any(
+        key in data for key in ("title", "description", "priority")
+    )
 
     if change_assignment or change_title_scope:
         if not is_manager_or_owner():
-            return jsonify({"error": "apenas owner/manager podem alterar tarefa desse jeito"}), 403
+            return (
+                jsonify(
+                    {"error": "apenas owner/manager podem alterar tarefa desse jeito"}
+                ),
+                403,
+            )
 
     if "title" in data:
         t.title = data["title"]

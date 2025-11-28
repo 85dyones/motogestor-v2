@@ -1,7 +1,9 @@
 # ai-service/app/__init__.py
 import os
+
 from flask import Flask
 from flask_jwt_extended import JWTManager
+
 from .models import db
 
 

@@ -1,5 +1,6 @@
 # teamcrm-service/app/models.py
-from datetime import datetime, date
+from datetime import datetime
+
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -41,8 +42,8 @@ class Task(db.Model):
     )  # LOW | NORMAL | HIGH | URGENT
 
     assigned_to_id = db.Column(db.Integer, db.ForeignKey("staff.id"))
-    related_order_id = db.Column(db.Integer)   # id da OS no management-service
-    customer_id = db.Column(db.Integer)        # id do cliente no management-service
+    related_order_id = db.Column(db.Integer)  # id da OS no management-service
+    customer_id = db.Column(db.Integer)  # id do cliente no management-service
 
     due_date = db.Column(db.Date)
     completed_at = db.Column(db.DateTime)
@@ -61,13 +62,13 @@ class Interaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tenant_id = db.Column(db.Integer, nullable=False, index=True)
 
-    customer_id = db.Column(db.Integer)   # id no management-service
+    customer_id = db.Column(db.Integer)  # id no management-service
     related_order_id = db.Column(db.Integer)  # opcional, se interação for sobre uma OS
 
-    channel = db.Column(
-        db.String(20)
-    )  # WHATSAPP | PHONE | IN_PERSON | EMAIL | OTHER
-    direction = db.Column(db.String(10))  # IN | OUT (cliente → oficina / oficina → cliente)
+    channel = db.Column(db.String(20))  # WHATSAPP | PHONE | IN_PERSON | EMAIL | OTHER
+    direction = db.Column(
+        db.String(10)
+    )  # IN | OUT (cliente → oficina / oficina → cliente)
     summary = db.Column(db.String(255))
     details = db.Column(db.Text)
 

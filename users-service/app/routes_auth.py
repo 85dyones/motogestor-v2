@@ -1,11 +1,11 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import get_jwt_identity, get_jwt, jwt_required
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from .models import db, User, Tenant
-from .identity import build_token
-from .schemas import AuthResponse, AuthUser, LoginRequest, RegisterRequest
 from .errors import ConflictError, NotFoundError, ValidationError
+from .identity import build_token
+from .models import Tenant, User, db
+from .schemas import AuthResponse, AuthUser, LoginRequest, RegisterRequest
 
 bp = Blueprint("auth_routes", __name__)
 
@@ -89,7 +89,7 @@ def register():
 def me():
     user_id = get_jwt_identity()
     user_id = int(user_id) if user_id is not None else None
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     token_claims = get_jwt()
     token_tenant_id = token_claims.get("tenant_id") if token_claims else None
 

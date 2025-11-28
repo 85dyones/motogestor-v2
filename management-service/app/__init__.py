@@ -1,7 +1,9 @@
 # management-service/app/__init__.py
 import os
+
 from flask import Flask
 from flask_jwt_extended import JWTManager
+
 from .models import db
 
 
@@ -23,8 +25,8 @@ def create_app():
 
     from .routes_customers import bp as customers_bp
     from .routes_motos import bp as motos_bp
-    from .routes_parts import bp as parts_bp
     from .routes_os import bp as os_bp
+    from .routes_parts import bp as parts_bp
 
     app.register_blueprint(customers_bp, url_prefix="/customers")
     app.register_blueprint(motos_bp, url_prefix="/motos")

@@ -1,8 +1,10 @@
 # teamcrm-service/app/routes_interactions.py
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, Interaction, Staff
+
+from .models import Interaction, Staff, db
 from .utils import get_current_tenant_id
 
 bp = Blueprint("interactions", __name__)

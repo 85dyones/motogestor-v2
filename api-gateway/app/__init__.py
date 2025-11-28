@@ -1,9 +1,10 @@
 # api-gateway/app/__init__.py
 import os
-from flask import Flask, jsonify, send_from_directory, current_app, request
-from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+
 import requests
+from flask import Flask, current_app, jsonify, request, send_from_directory
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
 
 from .config import load_config
 from .identity import extract_tenant_context
@@ -161,9 +162,7 @@ def create_app():
                 open_status = {"OPEN", "IN_PROGRESS", "WAITING_PARTS"}
                 summary["service_orders"] = {
                     "total": len(os_list),
-                    "open": len(
-                        [o for o in os_list if o.get("status") in open_status]
-                    ),
+                    "open": len([o for o in os_list if o.get("status") in open_status]),
                     "completed": len(
                         [o for o in os_list if o.get("status") == "COMPLETED"]
                     ),
@@ -185,9 +184,7 @@ def create_app():
                 rec_list = resp_rec.json()
                 summary["receivables"] = {
                     "pending_count": len(rec_list),
-                    "pending_total": sum(
-                        float(r.get("amount", 0)) for r in rec_list
-                    ),
+                    "pending_total": sum(float(r.get("amount", 0)) for r in rec_list),
                 }
             else:
                 summary["receivables"] = {"error": resp_rec.status_code}

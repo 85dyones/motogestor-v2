@@ -1,7 +1,8 @@
 # management-service/app/routes_customers.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, Customer
+
+from .models import Customer, db
 from .utils import get_current_tenant_id, is_manager_or_owner
 
 bp = Blueprint("customers", __name__)
@@ -39,9 +40,9 @@ def list_customers():
 @jwt_required()
 def get_customer(customer_id):
     tenant_id = get_current_tenant_id()
-    customer = Customer.query.filter_by(
-        id=customer_id, tenant_id=tenant_id, is_active=True
-    ).first_or_404()
+    customer = db.session.get(Customer, customer_id)
+    if not customer or customer.tenant_id != tenant_id or not customer.is_active:
+        abort(404)
 
     return jsonify(
         {
@@ -85,9 +86,9 @@ def update_customer(customer_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
 
-    customer = Customer.query.filter_by(
-        id=customer_id, tenant_id=tenant_id, is_active=True
-    ).first_or_404()
+    customer = db.session.get(Customer, customer_id)
+    if not customer or customer.tenant_id != tenant_id or not customer.is_active:
+        abort(404)
 
     customer.name = data.get("name", customer.name)
     customer.phone = data.get("phone", customer.phone)
@@ -107,9 +108,9 @@ def delete_customer(customer_id):
         return jsonify({"error": "permissão negada"}), 403
 
     tenant_id = get_current_tenant_id()
-    customer = Customer.query.filter_by(
-        id=customer_id, tenant_id=tenant_id, is_active=True
-    ).first_or_404()
+    customer = db.session.get(Customer, customer_id)
+    if not customer or customer.tenant_id != tenant_id or not customer.is_active:
+        abort(404)
 
     customer.is_active = False
     db.session.commit()

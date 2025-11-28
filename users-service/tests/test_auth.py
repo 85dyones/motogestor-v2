@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from app.identity import TENANT_ID_CLAIM
 from flask_jwt_extended import decode_token
 
-from app.identity import TENANT_ID_CLAIM
 from .factories import create_tenant, create_user
 
 

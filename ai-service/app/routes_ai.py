@@ -1,15 +1,7 @@
 # ai-service/app/routes_ai.py
-from datetime import datetime, date, timedelta
 import os
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
 
-from .models import db
-from .utils import (
-    get_current_tenant_id,
-    get_openai_client,
-    log_ai_request,
-)
+from flask import Blueprint
 
 bp = Blueprint("ai", __name__)
 

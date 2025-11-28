@@ -1,7 +1,8 @@
 # api-gateway/app/proxy.py
 from typing import Dict
+
 import requests
-from flask import request, Response
+from flask import Response, request
 
 # Cabeçalhos que NÃO devem ser repassados
 HOP_BY_HOP_HEADERS = {
