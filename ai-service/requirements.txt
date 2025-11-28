@@ -1,0 +1,7 @@
+flask
+gunicorn
+flask-jwt-extended
+flask-sqlalchemy
+psycopg2-binary
+python-dotenv
+openai

@@ -1,0 +1,47 @@
+:root {
+  --color-primary: #2563eb;
+  --color-secondary: #0ea5e9;
+  --color-accent: #f97316;
+  --color-background: #020617;
+  --color-surface: #0f172a;
+}
+
+.theme-bg {
+  background: radial-gradient(circle at top, #1d283a 0, #020617 55%);
+}
+
+.bg-surface {
+  background-color: var(--color-surface);
+}
+
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.border-primary {
+  border-color: var(--color-primary);
+}
+
+.btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-secondary)
+  );
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.chip-plan {
+  border-radius: 999px;
+  padding: 0.125rem 0.75rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}

@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: motogestor-postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - motogestor_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - motogestor-net
+
+  redis:
+    image: redis:7
+    container_name: motogestor-redis
+    env_file:
+      - .env
+    command: ["redis-server", "--save", "20", "1", "--loglevel", "warning"]
+    volumes:
+      - motogestor_redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - motogestor-net
+
+  users-service:
+    build:
+      context: ./users-service
+    container_name: motogestor-users
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      # Se quiser sobrescrever a URL inteira, set DATABASE_URL no .env
+      DATABASE_URL: ${DATABASE_URL:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      - postgres
+    ports:
+      - "5001:5001"
+    networks:
+      - motogestor-net
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: motogestor-gateway
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      USERS_SERVICE_URL: http://users-service:5001
+      MANAGEMENT_SERVICE_URL: http://management-service:5002
+      FINANCIAL_SERVICE_URL: http://financial-service:5003
+      TEAMCRM_SERVICE_URL: http://teamcrm-service:5004
+      AI_SERVICE_URL: http://ai-service:5005
+      FRONTEND_DIST_PATH: /app/frontend/dist
+    depends_on:
+      - users-service
+    ports:
+      - "8080:5000"
+    networks:
+      - motogestor-net
+
+networks:
+  motogestor-net:
+    driver: bridge
+
+volumes:
+  motogestor_postgres_data:
+  motogestor_redis_data:
