@@ -1,8 +1,10 @@
 # teamcrm-service/app/routes_dashboard.py
 from datetime import date, datetime, timedelta
-from flask import Blueprint, request, jsonify
+
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import Task, Interaction
+
+from .models import Interaction, Task
 from .utils import get_current_tenant_id
 
 bp = Blueprint("dashboard", __name__)

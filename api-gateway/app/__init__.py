@@ -1,9 +1,10 @@
 # api-gateway/app/__init__.py
 import os
-from flask import Flask, jsonify, send_from_directory, current_app, request
-from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+
 import requests
+from flask import Flask, current_app, jsonify, request, send_from_directory
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
 
 from .config import load_config
 from .identity import extract_tenant_context

@@ -1,4 +1,5 @@
 import time
+
 from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager, verify_jwt_in_request
 from sqlalchemy.exc import OperationalError
@@ -33,8 +34,8 @@ def create_app() -> Flask:
 
     # Blueprints
     from .routes_auth import bp as auth_bp
-    from .routes_users import bp as users_bp
     from .routes_seed import bp as seed_bp
+    from .routes_users import bp as users_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(users_bp, url_prefix="/users")

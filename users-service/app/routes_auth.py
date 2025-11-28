@@ -1,11 +1,11 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import get_jwt_identity, get_jwt, jwt_required
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from .models import db, User, Tenant
-from .identity import build_token
-from .schemas import AuthResponse, AuthUser, LoginRequest, RegisterRequest
 from .errors import ConflictError, NotFoundError, ValidationError
+from .identity import build_token
+from .models import Tenant, User, db
+from .schemas import AuthResponse, AuthUser, LoginRequest, RegisterRequest
 
 bp = Blueprint("auth_routes", __name__)
 

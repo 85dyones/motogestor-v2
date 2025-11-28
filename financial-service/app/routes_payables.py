@@ -1,8 +1,10 @@
 # financial-service/app/routes_payables.py
-from datetime import datetime, date
-from flask import Blueprint, request, jsonify, abort
+from datetime import date, datetime
+
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, AccountPayable, _to_decimal
+
+from .models import AccountPayable, _to_decimal, db
 from .utils import get_current_tenant_id, is_manager_or_owner
 
 bp = Blueprint("payables", __name__)

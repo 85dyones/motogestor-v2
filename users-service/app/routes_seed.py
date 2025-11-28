@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 from werkzeug.security import generate_password_hash
 
-from .models import db, User, Tenant
+from .models import Tenant, User, db
 
 bp = Blueprint("seed_routes", __name__)
 

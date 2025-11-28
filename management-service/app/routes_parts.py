@@ -1,7 +1,8 @@
 # management-service/app/routes_parts.py
-from flask import Blueprint, request, jsonify, abort
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, Part, StockMovement
+
+from .models import Part, StockMovement, db
 from .utils import get_current_tenant_id, is_manager_or_owner
 
 bp = Blueprint("parts", __name__)

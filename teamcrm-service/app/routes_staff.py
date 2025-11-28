@@ -1,7 +1,8 @@
 # teamcrm-service/app/routes_staff.py
-from flask import Blueprint, request, jsonify, abort
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, Staff
+
+from .models import Staff, db
 from .utils import get_current_tenant_id, is_manager_or_owner
 
 bp = Blueprint("staff", __name__)

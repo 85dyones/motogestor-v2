@@ -1,8 +1,10 @@
 # financial-service/app/routes_receivables.py
-from datetime import datetime, date
-from flask import Blueprint, request, jsonify, abort
+from datetime import date, datetime
+
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, AccountReceivable, _to_decimal
+
+from .models import AccountReceivable, _to_decimal, db
 from .utils import get_current_tenant_id, is_manager_or_owner
 
 bp = Blueprint("receivables", __name__)

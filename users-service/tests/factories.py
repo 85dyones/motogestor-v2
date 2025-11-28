@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+from app.models import Tenant, User, db
 from faker import Faker
 from werkzeug.security import generate_password_hash
-
-from app.models import Tenant, User, db
 
 fake = Faker()
 

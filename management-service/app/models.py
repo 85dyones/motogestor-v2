@@ -1,6 +1,7 @@
 # management-service/app/models.py
 from datetime import datetime
 from decimal import Decimal
+
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()

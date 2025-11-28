@@ -1,18 +1,12 @@
 # management-service/app/routes_os.py
 from datetime import datetime
 from decimal import Decimal
-from flask import Blueprint, request, jsonify, abort
+
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import (
-    db,
-    Customer,
-    Motorcycle,
-    Part,
-    ServiceOrder,
-    ServiceItem,
-    StockMovement,
-    recalc_order_totals,
-)
+
+from .models import (Customer, Motorcycle, Part, ServiceItem, ServiceOrder,
+                     StockMovement, db, recalc_order_totals)
 from .utils import get_current_tenant_id, is_manager_or_owner
 
 bp = Blueprint("os", __name__)

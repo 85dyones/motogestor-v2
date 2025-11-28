@@ -1,7 +1,8 @@
 # management-service/app/routes_customers.py
-from flask import Blueprint, request, jsonify, abort
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, Customer
+
+from .models import Customer, db
 from .utils import get_current_tenant_id, is_manager_or_owner
 
 bp = Blueprint("customers", __name__)

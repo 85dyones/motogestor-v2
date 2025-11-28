@@ -1,5 +1,6 @@
 # api-gateway/app/routes_auth.py
 from flask import Blueprint
+
 from .config import USERS_SERVICE_URL
 from .proxy import forward_request
 

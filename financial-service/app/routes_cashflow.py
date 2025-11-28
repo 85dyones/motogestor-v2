@@ -1,9 +1,11 @@
 # financial-service/app/routes_cashflow.py
 from datetime import date
 from decimal import Decimal
-from flask import Blueprint, request, jsonify
+
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import AccountReceivable, AccountPayable, _to_decimal
+
+from .models import AccountPayable, AccountReceivable, _to_decimal
 from .utils import get_current_tenant_id
 
 bp = Blueprint("cashflow", __name__)

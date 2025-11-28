@@ -1,8 +1,10 @@
 # teamcrm-service/app/routes_tasks.py
 from datetime import date, datetime
-from flask import Blueprint, request, jsonify, abort
+
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, Task, Staff
+
+from .models import Staff, Task, db
 from .utils import get_current_tenant_id, is_manager_or_owner
 
 bp = Blueprint("tasks", __name__)

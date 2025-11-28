@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from .errors import NotFoundError
-from .models import db, User
+from .models import User, db
 from .schemas import UserOut
 from .tenant import tenant_query
 

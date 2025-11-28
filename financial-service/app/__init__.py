@@ -1,7 +1,9 @@
 # financial-service/app/__init__.py
 import os
+
 from flask import Flask
 from flask_jwt_extended import JWTManager
+
 from .models import db
 
 
@@ -21,9 +23,9 @@ def create_app():
     db.init_app(app)
     jwt = JWTManager(app)  # noqa: F841
 
-    from .routes_receivables import bp as rec_bp
-    from .routes_payables import bp as pay_bp
     from .routes_cashflow import bp as cash_bp
+    from .routes_payables import bp as pay_bp
+    from .routes_receivables import bp as rec_bp
 
     app.register_blueprint(rec_bp, url_prefix="/receivables")
     app.register_blueprint(pay_bp, url_prefix="/payables")

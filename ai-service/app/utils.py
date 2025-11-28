@@ -6,7 +6,7 @@ from typing import Optional
 from flask_jwt_extended import get_jwt_identity
 from openai import OpenAI
 
-from .models import db, AiRequestLog
+from .models import AiRequestLog, db
 
 
 def get_current_identity():

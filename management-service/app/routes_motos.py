@@ -1,7 +1,8 @@
 # management-service/app/routes_motos.py
-from flask import Blueprint, request, jsonify, abort
+from flask import Blueprint, abort, jsonify, request
 from flask_jwt_extended import jwt_required
-from .models import db, Motorcycle, Customer
+
+from .models import Customer, Motorcycle, db
 from .utils import get_current_tenant_id
 
 bp = Blueprint("motos", __name__)
