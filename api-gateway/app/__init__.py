@@ -161,9 +161,7 @@ def create_app():
                 open_status = {"OPEN", "IN_PROGRESS", "WAITING_PARTS"}
                 summary["service_orders"] = {
                     "total": len(os_list),
-                    "open": len(
-                        [o for o in os_list if o.get("status") in open_status]
-                    ),
+                    "open": len([o for o in os_list if o.get("status") in open_status]),
                     "completed": len(
                         [o for o in os_list if o.get("status") == "COMPLETED"]
                     ),
@@ -185,9 +183,7 @@ def create_app():
                 rec_list = resp_rec.json()
                 summary["receivables"] = {
                     "pending_count": len(rec_list),
-                    "pending_total": sum(
-                        float(r.get("amount", 0)) for r in rec_list
-                    ),
+                    "pending_total": sum(float(r.get("amount", 0)) for r in rec_list),
                 }
             else:
                 summary["receivables"] = {"error": resp_rec.status_code}

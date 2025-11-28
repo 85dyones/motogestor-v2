@@ -1,4 +1,5 @@
 """Helpers for tenant-aware JWT claims shared across services."""
+
 from __future__ import annotations
 
 from typing import Any, Dict
@@ -10,7 +11,9 @@ PLAN_CLAIM = "plan"
 TENANT_NAME_CLAIM = "tenant_name"
 
 
-def build_token(identity: int, tenant_id: int, plan: str, tenant_name: str | None = None) -> str:
+def build_token(
+    identity: int, tenant_id: int, plan: str, tenant_name: str | None = None
+) -> str:
     claims = {
         TENANT_ID_CLAIM: tenant_id,
         PLAN_CLAIM: plan or "BASIC",

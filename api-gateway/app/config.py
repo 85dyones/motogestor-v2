@@ -1,4 +1,5 @@
 """Application configuration and settings loading for the API Gateway."""
+
 import os
 from dataclasses import dataclass
 from typing import Type

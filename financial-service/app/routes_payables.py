@@ -94,14 +94,21 @@ def create_payable():
     due_date = data.get("due_date")
 
     if not supplier_name or amount is None or not due_date:
-        return jsonify({"error": "supplier_name, amount e due_date são obrigatórios"}), 400
+        return (
+            jsonify({"error": "supplier_name, amount e due_date são obrigatórios"}),
+            400,
+        )
 
     pay = AccountPayable(
         tenant_id=tenant_id,
         supplier_name=supplier_name,
         description=data.get("description"),
         category=data.get("category") or "OTHER",
-        issue_date=date.fromisoformat(data.get("issue_date")) if data.get("issue_date") else date.today(),
+        issue_date=(
+            date.fromisoformat(data.get("issue_date"))
+            if data.get("issue_date")
+            else date.today()
+        ),
         due_date=date.fromisoformat(due_date),
         amount=_to_decimal(amount),
         notes=data.get("notes"),
@@ -132,9 +139,15 @@ def update_payable(pay_id):
     if "category" in data:
         pay.category = data["category"]
     if "issue_date" in data:
-        pay.issue_date = date.fromisoformat(data["issue_date"]) if data["issue_date"] else pay.issue_date
+        pay.issue_date = (
+            date.fromisoformat(data["issue_date"])
+            if data["issue_date"]
+            else pay.issue_date
+        )
     if "due_date" in data:
-        pay.due_date = date.fromisoformat(data["due_date"]) if data["due_date"] else pay.due_date
+        pay.due_date = (
+            date.fromisoformat(data["due_date"]) if data["due_date"] else pay.due_date
+        )
     if "amount" in data:
         pay.amount = _to_decimal(data["amount"])
     if "notes" in data:

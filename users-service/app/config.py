@@ -1,4 +1,5 @@
 """Configuration object for the users-service with validation defaults."""
+
 from __future__ import annotations
 
 import os
@@ -16,11 +17,19 @@ def _required(name: str) -> str:
 @dataclass
 class BaseConfig:
     app_env: str = os.getenv("APP_ENV", "development")
-    jwt_secret_key: str = field(default_factory=lambda: os.getenv("JWT_SECRET_KEY", "dev-secret"))
-    db_user: str = field(default_factory=lambda: os.getenv("POSTGRES_USER", "motogestor"))
-    db_password: str = field(default_factory=lambda: os.getenv("POSTGRES_PASSWORD", "motogestor_pwd"))
+    jwt_secret_key: str = field(
+        default_factory=lambda: os.getenv("JWT_SECRET_KEY", "dev-secret")
+    )
+    db_user: str = field(
+        default_factory=lambda: os.getenv("POSTGRES_USER", "motogestor")
+    )
+    db_password: str = field(
+        default_factory=lambda: os.getenv("POSTGRES_PASSWORD", "motogestor_pwd")
+    )
     db_host: str = field(default_factory=lambda: os.getenv("POSTGRES_HOST", "postgres"))
-    db_name: str = field(default_factory=lambda: os.getenv("POSTGRES_DB", "motogestor_dev"))
+    db_name: str = field(
+        default_factory=lambda: os.getenv("POSTGRES_DB", "motogestor_dev")
+    )
     log_level: str = field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
 
     @property

@@ -47,7 +47,9 @@ def list_os():
             "total_labor": float(o.total_labor or 0),
             "total_amount": float(o.total_amount or 0),
             "created_at": o.created_at.isoformat(),
-            "scheduled_date": o.scheduled_date.isoformat() if o.scheduled_date else None,
+            "scheduled_date": (
+                o.scheduled_date.isoformat() if o.scheduled_date else None
+            ),
             "closed_at": o.closed_at.isoformat() if o.closed_at else None,
         }
 
@@ -182,6 +184,8 @@ def update_os_status(order_id):
     db.session.commit()
 
     return jsonify({"message": "status atualizado"})
+
+
 @bp.post("/<int:order_id>/items")
 @jwt_required()
 def add_os_item(order_id):
@@ -246,21 +250,26 @@ def add_os_item(order_id):
 
     db.session.commit()
 
-    return jsonify(
-        {
-            "id": item.id,
-            "item_type": item.item_type,
-            "description": item.description,
-            "quantity": float(item.quantity or 0),
-            "unit_price": float(item.unit_price or 0),
-            "total": float(item.total or 0),
-            "order_totals": {
-                "total_parts": float(order.total_parts or 0),
-                "total_labor": float(order.total_labor or 0),
-                "total_amount": float(order.total_amount or 0),
-            },
-        }
-    ), 201
+    return (
+        jsonify(
+            {
+                "id": item.id,
+                "item_type": item.item_type,
+                "description": item.description,
+                "quantity": float(item.quantity or 0),
+                "unit_price": float(item.unit_price or 0),
+                "total": float(item.total or 0),
+                "order_totals": {
+                    "total_parts": float(order.total_parts or 0),
+                    "total_labor": float(order.total_labor or 0),
+                    "total_amount": float(order.total_amount or 0),
+                },
+            }
+        ),
+        201,
+    )
+
+
 @bp.patch("/<int:order_id>/items/<int:item_id>")
 @jwt_required()
 def update_os_item(order_id, item_id):
@@ -290,6 +299,8 @@ def update_os_item(order_id, item_id):
     db.session.commit()
 
     return jsonify({"message": "item atualizado"})
+
+
 @bp.delete("/<int:order_id>/items/<int:item_id>")
 @jwt_required()
 def delete_os_item(order_id, item_id):

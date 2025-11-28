@@ -32,7 +32,9 @@ def list_tasks():
     if only_open:
         query = query.filter(Task.status.in_(["OPEN", "IN_PROGRESS", "WAITING"]))
 
-    tasks = query.order_by(Task.due_date.asc().nulls_last(), Task.created_at.desc()).all()
+    tasks = query.order_by(
+        Task.due_date.asc().nulls_last(), Task.created_at.desc()
+    ).all()
 
     return jsonify(
         [
@@ -148,11 +150,18 @@ def update_task(task_id):
     change_assignment = any(
         key in data for key in ("assigned_to_id", "customer_id", "related_order_id")
     )
-    change_title_scope = any(key in data for key in ("title", "description", "priority"))
+    change_title_scope = any(
+        key in data for key in ("title", "description", "priority")
+    )
 
     if change_assignment or change_title_scope:
         if not is_manager_or_owner():
-            return jsonify({"error": "apenas owner/manager podem alterar tarefa desse jeito"}), 403
+            return (
+                jsonify(
+                    {"error": "apenas owner/manager podem alterar tarefa desse jeito"}
+                ),
+                403,
+            )
 
     if "title" in data:
         t.title = data["title"]

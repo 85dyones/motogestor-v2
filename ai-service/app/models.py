@@ -11,8 +11,10 @@ class AiRequestLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tenant_id = db.Column(db.Integer, nullable=False, index=True)
 
-    request_type = db.Column(db.String(50), nullable=False)  # whatsapp_message, maintenance_recommendation, os_note, generic_chat
-    input_payload = db.Column(db.Text)   # JSON como string
+    request_type = db.Column(
+        db.String(50), nullable=False
+    )  # whatsapp_message, maintenance_recommendation, os_note, generic_chat
+    input_payload = db.Column(db.Text)  # JSON como string
     output_payload = db.Column(db.Text)  # JSON como string
     success = db.Column(db.Boolean, default=True)
     error_message = db.Column(db.Text)

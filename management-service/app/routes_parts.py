@@ -137,7 +137,9 @@ def stock_movement(part_id):
     db.session.add(movement)
     db.session.commit()
 
-    return jsonify({"message": "movimentação registrada", "stock": part.quantity_in_stock})
+    return jsonify(
+        {"message": "movimentação registrada", "stock": part.quantity_in_stock}
+    )
 
 
 @bp.get("/<int:part_id>/movements")

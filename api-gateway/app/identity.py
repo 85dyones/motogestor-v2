@@ -1,4 +1,5 @@
 """Shared identity/claim helpers for propagating tenant context between services."""
+
 from __future__ import annotations
 
 from typing import Any, Dict

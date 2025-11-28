@@ -1,4 +1,5 @@
 """Basic JSON-style logging configuration for services."""
+
 import json
 import logging
 import os
@@ -31,7 +32,9 @@ def setup_logging(default_level: str = "INFO") -> None:
 
 
 class JsonFormatter(logging.Formatter):
-    def format(self, record: logging.LogRecord) -> str:  # pragma: no cover - format helper
+    def format(
+        self, record: logging.LogRecord
+    ) -> str:  # pragma: no cover - format helper
         payload = {
             "level": record.levelname,
             "message": record.getMessage(),

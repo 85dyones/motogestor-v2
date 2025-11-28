@@ -30,13 +30,22 @@ def get_openai_client() -> Optional[OpenAI]:
     return OpenAI(api_key=api_key)
 
 
-def log_ai_request(tenant_id: int, request_type: str, input_data: dict, output_data: dict | None, success: bool, error_message: str | None = None):
+def log_ai_request(
+    tenant_id: int,
+    request_type: str,
+    input_data: dict,
+    output_data: dict | None,
+    success: bool,
+    error_message: str | None = None,
+):
     try:
         log = AiRequestLog(
             tenant_id=tenant_id,
             request_type=request_type,
             input_payload=json.dumps(input_data, ensure_ascii=False),
-            output_payload=json.dumps(output_data, ensure_ascii=False) if output_data else None,
+            output_payload=(
+                json.dumps(output_data, ensure_ascii=False) if output_data else None
+            ),
             success=success,
             error_message=error_message,
         )

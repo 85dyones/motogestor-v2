@@ -59,7 +59,9 @@ def create_app() -> Flask:
                     break
                 except OperationalError as e:
                     attempts -= 1
-                    print(f"[users-service] Banco não pronto, tentando de novo... ({attempts})")
+                    print(
+                        f"[users-service] Banco não pronto, tentando de novo... ({attempts})"
+                    )
                     print(str(e))
                     time.sleep(3)
 

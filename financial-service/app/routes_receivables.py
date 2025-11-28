@@ -1,6 +1,5 @@
 # financial-service/app/routes_receivables.py
 from datetime import datetime, date
-from decimal import Decimal
 from flask import Blueprint, request, jsonify, abort
 from flask_jwt_extended import jwt_required
 from .models import db, AccountReceivable, _to_decimal
@@ -98,7 +97,10 @@ def create_receivable():
     due_date = data.get("due_date")
 
     if not customer_name or amount is None or not due_date:
-        return jsonify({"error": "customer_name, amount e due_date são obrigatórios"}), 400
+        return (
+            jsonify({"error": "customer_name, amount e due_date são obrigatórios"}),
+            400,
+        )
 
     rec = AccountReceivable(
         tenant_id=tenant_id,
@@ -106,7 +108,11 @@ def create_receivable():
         source_id=data.get("source_id"),
         customer_name=customer_name,
         description=data.get("description"),
-        issue_date=date.fromisoformat(data.get("issue_date")) if data.get("issue_date") else date.today(),
+        issue_date=(
+            date.fromisoformat(data.get("issue_date"))
+            if data.get("issue_date")
+            else date.today()
+        ),
         due_date=date.fromisoformat(due_date),
         amount=_to_decimal(amount),
         notes=data.get("notes"),
@@ -143,7 +149,14 @@ def create_from_os():
     due_date = data.get("due_date")
 
     if not all([so_id, customer_name, amount, due_date]):
-        return jsonify({"error": "service_order_id, customer_name, amount e due_date são obrigatórios"}), 400
+        return (
+            jsonify(
+                {
+                    "error": "service_order_id, customer_name, amount e due_date são obrigatórios"
+                }
+            ),
+            400,
+        )
 
     rec = AccountReceivable(
         tenant_id=tenant_id,
@@ -179,9 +192,15 @@ def update_receivable(rec_id):
     if "description" in data:
         rec.description = data["description"]
     if "issue_date" in data:
-        rec.issue_date = date.fromisoformat(data["issue_date"]) if data["issue_date"] else rec.issue_date
+        rec.issue_date = (
+            date.fromisoformat(data["issue_date"])
+            if data["issue_date"]
+            else rec.issue_date
+        )
     if "due_date" in data:
-        rec.due_date = date.fromisoformat(data["due_date"]) if data["due_date"] else rec.due_date
+        rec.due_date = (
+            date.fromisoformat(data["due_date"]) if data["due_date"] else rec.due_date
+        )
     if "amount" in data:
         rec.amount = _to_decimal(data["amount"])
     if "notes" in data:

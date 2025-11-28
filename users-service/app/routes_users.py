@@ -20,11 +20,18 @@ def list_users():
 
     users = tenant_query(User).all()
 
-    return jsonify([UserOut(**{
-        "id": u.id,
-        "name": u.name,
-        "email": u.email,
-        "tenant_id": u.tenant_id,
-        "role": u.role,
-        "plan": u.plan,
-    }).model_dump() for u in users])
+    return jsonify(
+        [
+            UserOut(
+                **{
+                    "id": u.id,
+                    "name": u.name,
+                    "email": u.email,
+                    "tenant_id": u.tenant_id,
+                    "role": u.role,
+                    "plan": u.plan,
+                }
+            ).model_dump()
+            for u in users
+        ]
+    )
