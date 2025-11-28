@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
+import StateBlock from "../components/ui/StateBlock";
 import { useAuth } from "../contexts/AuthContext";
-
-const API_URL = import.meta.env.VITE_API_URL || "";
+import { apiRequest, ApiError } from "../lib/api";
 
 type Overview = {
   service_orders?: {
@@ -27,19 +27,20 @@ const DashboardPage: React.FC = () => {
   const { token } = useAuth();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
     const load = async () => {
       setLoading(true);
       try {
-        const resp = await fetch(`${API_URL}/overview`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (resp.ok) {
-          const data = (await resp.json()) as Overview;
-          setOverview(data);
-        }
+        const data = await apiRequest<Overview>("/overview", { token });
+        setOverview(data);
+        setError(null);
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Erro ao carregar";
+        setError(message);
+        setOverview(null);
       } finally {
         setLoading(false);
       }
@@ -72,9 +73,9 @@ const DashboardPage: React.FC = () => {
             </span>
             <Badge tone="info">OS</Badge>
           </div>
-          {loading ? (
-            <div className="text-sm text-slate-400">Carregando...</div>
-          ) : (
+          {loading && <StateBlock state="loading" />}
+          {!loading && error && <StateBlock state="error" message={error} />}
+          {!loading && !error && (
             <>
               <div className="text-2xl font-semibold text-slate-50">
                 {so.total ?? 0}
@@ -104,9 +105,9 @@ const DashboardPage: React.FC = () => {
             </span>
             <Badge tone="warning">Financeiro</Badge>
           </div>
-          {loading ? (
-            <div className="text-sm text-slate-400">Carregando...</div>
-          ) : (
+          {loading && <StateBlock state="loading" />}
+          {!loading && error && <StateBlock state="error" message={error} />}
+          {!loading && !error && (
             <>
               <div className="text-2xl font-semibold text-slate-50">
                 R$ {Number(rec.pending_total ?? 0).toFixed(2)}
@@ -125,9 +126,9 @@ const DashboardPage: React.FC = () => {
             </span>
             <Badge tone="success">Equipe & CRM</Badge>
           </div>
-          {loading ? (
-            <div className="text-sm text-slate-400">Carregando...</div>
-          ) : (
+          {loading && <StateBlock state="loading" />}
+          {!loading && error && <StateBlock state="error" message={error} />}
+          {!loading && !error && (
             <>
               <div className="text-2xl font-semibold text-slate-50">
                 {tasks.open_count ?? 0}

@@ -3,8 +3,10 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState
 } from "react";
+import { ApiError, apiRequest } from "../lib/api";
 
 type User = {
   id: number;
@@ -27,8 +29,6 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "motogestor_auth";
-
-const API_URL = import.meta.env.VITE_API_URL || "";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children
@@ -63,29 +63,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
+      const data = await apiRequest<{ access_token: string; user: User }>(
+        "/auth/login",
+        {
+          method: "POST",
+          body: { email, password }
+        }
+      );
+      const jwt = data.access_token;
 
-      if (!resp.ok) {
-        throw new Error("Credenciais inválidas");
-      }
-
-      const data = await resp.json();
-      const jwt = data.access_token as string;
-
-      // busca /me
-      const meResp = await fetch(`${API_URL}/me`, {
-        headers: { Authorization: `Bearer ${jwt}` }
-      });
-      if (!meResp.ok) throw new Error("Falha ao carregar dados do usuário");
-      const me = (await meResp.json()) as User;
-
+      const me = await apiRequest<User>("/auth/me", { token: jwt });
       setUser(me);
       setToken(jwt);
       persist(me, jwt);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Falha ao entrar";
+      throw new Error(message);
     } finally {
       setLoading(false);
     }
@@ -97,11 +90,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     persist(null, null);
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, token, loading, login, logout }),
+    [user, token, loading, login, logout]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextValue => {

@@ -1,7 +1,10 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from .errors import NotFoundError
 from .models import User
+from .schemas import UserOut
+from .tenant import tenant_query
 
 bp = Blueprint("users_routes", __name__)
 
@@ -10,22 +13,18 @@ bp = Blueprint("users_routes", __name__)
 @jwt_required()
 def list_users():
     current_user_id = get_jwt_identity()
+    current_user_id = int(current_user_id) if current_user_id is not None else None
     current_user = User.query.get(current_user_id)
     if not current_user:
-        return jsonify({"msg": "Usuário não encontrado."}), 404
+        raise NotFoundError("Usuário não encontrado.")
 
-    users = User.query.filter_by(tenant_id=current_user.tenant_id).all()
+    users = tenant_query(User).all()
 
-    return jsonify(
-        [
-            {
-                "id": u.id,
-                "name": u.name,
-                "email": u.email,
-                "tenant_id": u.tenant_id,
-                "role": u.role,
-                "plan": u.plan,
-            }
-            for u in users
-        ]
-    )
+    return jsonify([UserOut(**{
+        "id": u.id,
+        "name": u.name,
+        "email": u.email,
+        "tenant_id": u.tenant_id,
+        "role": u.role,
+        "plan": u.plan,
+    }).model_dump() for u in users])
