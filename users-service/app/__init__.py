@@ -1,37 +1,35 @@
-import os
 import time
-from flask import Flask
-from flask_jwt_extended import JWTManager
+from flask import Flask, jsonify
+from flask_jwt_extended import JWTManager, verify_jwt_in_request
 from sqlalchemy.exc import OperationalError
 
+from .config import load_config
+from .errors import register_error_handlers
+from .logging_setup import setup_logging
 from .models import db
+from .tenant import set_current_tenant_from_jwt
 
 
 def create_app() -> Flask:
+    setup_logging()
+    cfg = load_config()
+
     app = Flask(__name__)
 
-    # Ambiente
-    app.config["ENV"] = os.getenv("APP_ENV", "development")
-
-    # JWT
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret")
-
-    # Config do banco via env
-    db_user = os.getenv("POSTGRES_USER", "motogestor")
-    db_password = os.getenv("POSTGRES_PASSWORD", "motogestor_pwd")
-    db_host = os.getenv("POSTGRES_HOST", "postgres")
-    db_name = os.getenv("POSTGRES_DB", "motogestor_dev")
-
-    database_url = os.getenv(
-        "DATABASE_URL",
-        f"postgresql://{db_user}:{db_password}@{db_host}:5432/{db_name}",
-    )
-
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    app.config["ENV"] = cfg.app_env
+    app.config["JWT_SECRET_KEY"] = cfg.jwt_secret_key
+    app.config["SQLALCHEMY_DATABASE_URI"] = cfg.database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
     jwt = JWTManager(app)  # noqa: F841
+
+    register_error_handlers(app)
+
+    @app.before_request
+    def inject_tenant_context():
+        verify_jwt_in_request(optional=True)  # carrega claims se existirem
+        set_current_tenant_from_jwt()
 
     # Blueprints
     from .routes_auth import bp as auth_bp
@@ -44,10 +42,11 @@ def create_app() -> Flask:
 
     @app.route("/health")
     def health():
-        return {
-            "status": "ok",
-            "service": "users-service",
-        }, 200
+        try:
+            db.session.execute("SELECT 1")
+            return {"status": "ok", "service": "users-service"}, 200
+        except OperationalError:
+            return jsonify({"status": "degraded", "service": "users-service"}), 503
 
     # DEV only: tenta criar tabelas com alguns retries
     if app.config["ENV"] == "development":
