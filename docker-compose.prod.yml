@@ -1,0 +1,65 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata-prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-motogestor}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  users-service:
+    build:
+      context: ./users-service
+    restart: always
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    restart: always
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      USERS_SERVICE_URL: http://users-service:5000
+      LOG_LEVEL: INFO
+    depends_on:
+      users-service:
+        condition: service_healthy
+    ports:
+      - "80:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata-prod:
