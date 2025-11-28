@@ -1,6 +1,6 @@
 # financial-service/app/routes_payables.py
 from datetime import datetime, date
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, abort
 from flask_jwt_extended import jwt_required
 from .models import db, AccountPayable, _to_decimal
 from .utils import get_current_tenant_id, is_manager_or_owner
@@ -58,9 +58,9 @@ def list_payables():
 @jwt_required()
 def get_payable(pay_id):
     tenant_id = get_current_tenant_id()
-    p = AccountPayable.query.filter_by(
-        id=pay_id, tenant_id=tenant_id
-    ).first_or_404()
+    p = db.session.get(AccountPayable, pay_id)
+    if not p or p.tenant_id != tenant_id:
+        abort(404)
 
     return jsonify(
         {
@@ -121,9 +121,9 @@ def update_payable(pay_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
 
-    pay = AccountPayable.query.filter_by(
-        id=pay_id, tenant_id=tenant_id
-    ).first_or_404()
+    pay = db.session.get(AccountPayable, pay_id)
+    if not pay or pay.tenant_id != tenant_id:
+        abort(404)
 
     if "supplier_name" in data:
         pay.supplier_name = data["supplier_name"]
@@ -168,9 +168,9 @@ def pay_payable(pay_id):
     if amount is None:
         return jsonify({"error": "amount é obrigatório"}), 400
 
-    pay = AccountPayable.query.filter_by(
-        id=pay_id, tenant_id=tenant_id
-    ).first_or_404()
+    pay = db.session.get(AccountPayable, pay_id)
+    if not pay or pay.tenant_id != tenant_id:
+        abort(404)
 
     pay_amount = _to_decimal(amount)
     new_paid = _to_decimal(pay.paid_amount) + pay_amount
@@ -202,9 +202,9 @@ def cancel_payable(pay_id):
         return jsonify({"error": "permissão negada"}), 403
 
     tenant_id = get_current_tenant_id()
-    pay = AccountPayable.query.filter_by(
-        id=pay_id, tenant_id=tenant_id
-    ).first_or_404()
+    pay = db.session.get(AccountPayable, pay_id)
+    if not pay or pay.tenant_id != tenant_id:
+        abort(404)
 
     pay.status = "CANCELLED"
     db.session.commit()

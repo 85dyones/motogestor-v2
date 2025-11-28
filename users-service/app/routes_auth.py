@@ -89,7 +89,7 @@ def register():
 def me():
     user_id = get_jwt_identity()
     user_id = int(user_id) if user_id is not None else None
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     token_claims = get_jwt()
     token_tenant_id = token_claims.get("tenant_id") if token_claims else None
 

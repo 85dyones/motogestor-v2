@@ -1,5 +1,5 @@
 # management-service/app/routes_parts.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, abort
 from flask_jwt_extended import jwt_required
 from .models import db, Part, StockMovement
 from .utils import get_current_tenant_id, is_manager_or_owner
@@ -75,7 +75,9 @@ def update_part(part_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
 
-    part = Part.query.filter_by(id=part_id, tenant_id=tenant_id, is_active=True).first_or_404()
+    part = db.session.get(Part, part_id)
+    if not part or part.tenant_id != tenant_id or not part.is_active:
+        abort(404)
 
     part.sku = data.get("sku", part.sku)
     part.name = data.get("name", part.name)
@@ -108,9 +110,9 @@ def stock_movement(part_id):
     if not quantity:
         return jsonify({"error": "quantity é obrigatório"}), 400
 
-    part = Part.query.filter_by(
-        id=part_id, tenant_id=tenant_id, is_active=True
-    ).first_or_404()
+    part = db.session.get(Part, part_id)
+    if not part or part.tenant_id != tenant_id or not part.is_active:
+        abort(404)
 
     qty = int(quantity)
 
@@ -143,9 +145,9 @@ def stock_movement(part_id):
 def list_movements(part_id):
     tenant_id = get_current_tenant_id()
 
-    part = Part.query.filter_by(
-        id=part_id, tenant_id=tenant_id, is_active=True
-    ).first_or_404()
+    part = db.session.get(Part, part_id)
+    if not part or part.tenant_id != tenant_id or not part.is_active:
+        abort(404)
 
     moves = (
         StockMovement.query.filter_by(tenant_id=tenant_id, part_id=part.id)

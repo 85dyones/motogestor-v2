@@ -1,5 +1,5 @@
 # teamcrm-service/app/routes_staff.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, abort
 from flask_jwt_extended import jwt_required
 from .models import db, Staff
 from .utils import get_current_tenant_id, is_manager_or_owner
@@ -40,7 +40,9 @@ def list_staff():
 @jwt_required()
 def get_staff(staff_id):
     tenant_id = get_current_tenant_id()
-    s = Staff.query.filter_by(id=staff_id, tenant_id=tenant_id).first_or_404()
+    s = db.session.get(Staff, staff_id)
+    if not s or s.tenant_id != tenant_id:
+        abort(404)
 
     return jsonify(
         {
@@ -89,7 +91,9 @@ def update_staff(staff_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
 
-    s = Staff.query.filter_by(id=staff_id, tenant_id=tenant_id).first_or_404()
+    s = db.session.get(Staff, staff_id)
+    if not s or s.tenant_id != tenant_id:
+        abort(404)
 
     if "name" in data:
         s.name = data["name"]

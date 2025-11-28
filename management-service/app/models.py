@@ -114,4 +114,19 @@ class StockMovement(db.Model):
     related_order_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    part = db.relationship("Part", backref="movements
+    part = db.relationship("Part", backref="movements")
+
+
+def recalc_order_totals(order: ServiceOrder):
+    """Recalculate numeric totals for a ServiceOrder from its items."""
+    tp = Decimal("0")
+    tl = Decimal("0")
+    for i in getattr(order, "items", []):
+        val = i.total or Decimal("0")
+        if getattr(i, "item_type", "") == "part":
+            tp += val
+        else:
+            tl += val
+    order.total_parts = tp
+    order.total_labor = tl
+    order.total_amount = tp + tl

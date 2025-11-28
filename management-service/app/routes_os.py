@@ -1,7 +1,7 @@
 # management-service/app/routes_os.py
 from datetime import datetime
 from decimal import Decimal
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, abort
 from flask_jwt_extended import jwt_required
 from .models import (
     db,
@@ -58,9 +58,9 @@ def list_os():
 @jwt_required()
 def get_os(order_id):
     tenant_id = get_current_tenant_id()
-    order = ServiceOrder.query.filter_by(
-        id=order_id, tenant_id=tenant_id
-    ).first_or_404()
+    order = db.session.get(ServiceOrder, order_id)
+    if not order or order.tenant_id != tenant_id:
+        abort(404)
 
     items = [
         {
@@ -137,9 +137,9 @@ def update_os(order_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
 
-    order = ServiceOrder.query.filter_by(
-        id=order_id, tenant_id=tenant_id
-    ).first_or_404()
+    order = db.session.get(ServiceOrder, order_id)
+    if not order or order.tenant_id != tenant_id:
+        abort(404)
 
     if "description" in data:
         order.description = data["description"]
@@ -171,9 +171,9 @@ def update_os_status(order_id):
     ]:
         return jsonify({"error": "status inválido"}), 400
 
-    order = ServiceOrder.query.filter_by(
-        id=order_id, tenant_id=tenant_id
-    ).first_or_404()
+    order = db.session.get(ServiceOrder, order_id)
+    if not order or order.tenant_id != tenant_id:
+        abort(404)
 
     order.status = new_status
     if new_status == "COMPLETED":
@@ -197,9 +197,9 @@ def add_os_item(order_id):
     if item_type not in ("part", "labor"):
         return jsonify({"error": "item_type deve ser 'part' ou 'labor'"}), 400
 
-    order = ServiceOrder.query.filter_by(
-        id=order_id, tenant_id=tenant_id
-    ).first_or_404()
+    order = db.session.get(ServiceOrder, order_id)
+    if not order or order.tenant_id != tenant_id:
+        abort(404)
 
     part = None
     if item_type == "part":
@@ -267,12 +267,12 @@ def update_os_item(order_id, item_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
 
-    order = ServiceOrder.query.filter_by(
-        id=order_id, tenant_id=tenant_id
-    ).first_or_404()
-    item = ServiceItem.query.filter_by(
-        id=item_id, tenant_id=tenant_id, service_order_id=order.id
-    ).first_or_404()
+    order = db.session.get(ServiceOrder, order_id)
+    if not order or order.tenant_id != tenant_id:
+        abort(404)
+    item = db.session.get(ServiceItem, item_id)
+    if not item or item.tenant_id != tenant_id or item.service_order_id != order.id:
+        abort(404)
 
     # não vamos tentar reverter estoque automaticamente pra não virar caos,
     # ajustes de quantidade de peça grandes o dono faz via tela de estoque
@@ -295,12 +295,12 @@ def update_os_item(order_id, item_id):
 def delete_os_item(order_id, item_id):
     tenant_id = get_current_tenant_id()
 
-    order = ServiceOrder.query.filter_by(
-        id=order_id, tenant_id=tenant_id
-    ).first_or_404()
-    item = ServiceItem.query.filter_by(
-        id=item_id, tenant_id=tenant_id, service_order_id=order.id
-    ).first_or_404()
+    order = db.session.get(ServiceOrder, order_id)
+    if not order or order.tenant_id != tenant_id:
+        abort(404)
+    item = db.session.get(ServiceItem, item_id)
+    if not item or item.tenant_id != tenant_id or item.service_order_id != order.id:
+        abort(404)
 
     # opcional: não devolver estoque automático pra não confundir controle
     db.session.delete(item)

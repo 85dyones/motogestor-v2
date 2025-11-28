@@ -1,7 +1,7 @@
 # financial-service/app/routes_receivables.py
 from datetime import datetime, date
 from decimal import Decimal
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, abort
 from flask_jwt_extended import jwt_required
 from .models import db, AccountReceivable, _to_decimal
 from .utils import get_current_tenant_id, is_manager_or_owner
@@ -60,9 +60,9 @@ def list_receivables():
 @jwt_required()
 def get_receivable(rec_id):
     tenant_id = get_current_tenant_id()
-    r = AccountReceivable.query.filter_by(
-        id=rec_id, tenant_id=tenant_id
-    ).first_or_404()
+    r = db.session.get(AccountReceivable, rec_id)
+    if not r or r.tenant_id != tenant_id:
+        abort(404)
 
     return jsonify(
         {
@@ -170,9 +170,9 @@ def update_receivable(rec_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
 
-    rec = AccountReceivable.query.filter_by(
-        id=rec_id, tenant_id=tenant_id
-    ).first_or_404()
+    rec = db.session.get(AccountReceivable, rec_id)
+    if not rec or rec.tenant_id != tenant_id:
+        abort(404)
 
     if "customer_name" in data:
         rec.customer_name = data["customer_name"]
@@ -215,9 +215,9 @@ def pay_receivable(rec_id):
     if amount is None:
         return jsonify({"error": "amount é obrigatório"}), 400
 
-    rec = AccountReceivable.query.filter_by(
-        id=rec_id, tenant_id=tenant_id
-    ).first_or_404()
+    rec = db.session.get(AccountReceivable, rec_id)
+    if not rec or rec.tenant_id != tenant_id:
+        abort(404)
 
     pay_amount = _to_decimal(amount)
     new_received = _to_decimal(rec.received_amount) + pay_amount
@@ -249,9 +249,9 @@ def cancel_receivable(rec_id):
         return jsonify({"error": "permissão negada"}), 403
 
     tenant_id = get_current_tenant_id()
-    rec = AccountReceivable.query.filter_by(
-        id=rec_id, tenant_id=tenant_id
-    ).first_or_404()
+    rec = db.session.get(AccountReceivable, rec_id)
+    if not rec or rec.tenant_id != tenant_id:
+        abort(404)
 
     rec.status = "CANCELLED"
     db.session.commit()

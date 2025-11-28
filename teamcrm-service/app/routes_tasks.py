@@ -1,6 +1,6 @@
 # teamcrm-service/app/routes_tasks.py
 from datetime import date, datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, abort
 from flask_jwt_extended import jwt_required
 from .models import db, Task, Staff
 from .utils import get_current_tenant_id, is_manager_or_owner
@@ -57,7 +57,9 @@ def list_tasks():
 @jwt_required()
 def get_task(task_id):
     tenant_id = get_current_tenant_id()
-    t = Task.query.filter_by(id=task_id, tenant_id=tenant_id).first_or_404()
+    t = db.session.get(Task, task_id)
+    if not t or t.tenant_id != tenant_id:
+        abort(404)
 
     return jsonify(
         {
@@ -138,7 +140,9 @@ def update_task(task_id):
 
     # Edição geral: dono/gerente; o próprio responsável pode mexer no status
     # mas pra simplificar, vamos exigir PERMISSÃO só em mudanças sensíveis.
-    t = Task.query.filter_by(id=task_id, tenant_id=tenant_id).first_or_404()
+    t = db.session.get(Task, task_id)
+    if not t or t.tenant_id != tenant_id:
+        abort(404)
 
     # Controles básicos de permissão
     change_assignment = any(

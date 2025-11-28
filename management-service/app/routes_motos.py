@@ -1,5 +1,5 @@
 # management-service/app/routes_motos.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, abort
 from flask_jwt_extended import jwt_required
 from .models import db, Motorcycle, Customer
 from .utils import get_current_tenant_id
@@ -76,9 +76,9 @@ def update_moto(moto_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
 
-    moto = Motorcycle.query.filter_by(
-        id=moto_id, tenant_id=tenant_id, is_active=True
-    ).first_or_404()
+    moto = db.session.get(Motorcycle, moto_id)
+    if not moto or moto.tenant_id != tenant_id or not moto.is_active:
+        abort(404)
 
     moto.brand = data.get("brand", moto.brand)
     moto.model = data.get("model", moto.model)
@@ -97,9 +97,9 @@ def update_moto(moto_id):
 def delete_moto(moto_id):
     tenant_id = get_current_tenant_id()
 
-    moto = Motorcycle.query.filter_by(
-        id=moto_id, tenant_id=tenant_id, is_active=True
-    ).first_or_404()
+    moto = db.session.get(Motorcycle, moto_id)
+    if not moto or moto.tenant_id != tenant_id or not moto.is_active:
+        abort(404)
 
     moto.is_active = False
     db.session.commit()
