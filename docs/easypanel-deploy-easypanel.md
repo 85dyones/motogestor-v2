@@ -42,3 +42,7 @@ Tags e versionamento:
 
 Se não quiser publicar automaticamente, você pode manter o workflow apenas para validação e manter a publicação manual ou controlada em outro workflow.
 
+Nota sobre testes em-container
+
+Os Dockerfiles foram atualizados para incluir um stage `test` (target `test`) que copia a pasta `tests/` para dentro da imagem. O workflow de CI agora constrói esse target e executa os testes dentro da imagem para garantir que o ambiente interno da imagem também passa nos testes. Isso não altera a imagem final usada em produção (o target `test` é apenas um stage de build adicional).
+
