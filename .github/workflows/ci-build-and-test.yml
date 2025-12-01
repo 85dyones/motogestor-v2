@@ -257,6 +257,14 @@ jobs:
           load: true
           tags: motogestor-gateway-e2e:${{ env.E2E_TAG }}
 
+      - name: Build management-service image for E2E
+        uses: docker/build-push-action@v4
+        with:
+          context: ./management-service
+          push: false
+          load: true
+          tags: motogestor-management-e2e:${{ env.E2E_TAG }}
+
       - name: Create network for E2E
         run: |
           docker network create e2e-net || true
@@ -277,6 +285,10 @@ jobs:
         run: |
           docker run -d --name e2e-users --network e2e-net -e APP_ENV=development -e DATABASE_URL="postgresql://motogestor:motogestor_pwd@e2e-postgres:5432/motogestor_integration" -p 5001:5001 motogestor-users-e2e:${{ env.E2E_TAG }}
 
+      - name: Start management-service (E2E)
+        run: |
+          docker run -d --name e2e-management --network e2e-net -e APP_ENV=development -e DATABASE_URL="postgresql://motogestor:motogestor_pwd@e2e-postgres:5432/motogestor_integration" -p 5002:5002 motogestor-management-e2e:${{ env.E2E_TAG }}
+
       - name: Wait for users-service
         run: |
           for i in {1..30}; do curl -sSf http://localhost:5001/health && break || sleep 1; done
@@ -295,6 +307,9 @@ jobs:
           curl -sSf -X POST http://localhost:5001/users/seed-demo
           # Login via api-gateway (forwards to users-service)
           curl -sSf -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" -d '{"email": "demo@motogestor.com", "password": "demo123"}' | jq .
+
+          # Check management-service health via gateway proxy
+          curl -sSf http://localhost:8080/management/health
 
       - name: Cleanup E2E containers
         if: always()
