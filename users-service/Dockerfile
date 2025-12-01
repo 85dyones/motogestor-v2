@@ -19,3 +19,9 @@ ENV PORT=5001
 EXPOSE 5001
 
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} wsgi:app"]
+
+# Test target: builds on top of 'runtime' and copies tests into the image so CI
+# can build the 'test' target and run pytest inside the container. This does not
+# affect the default runtime image.
+FROM runtime AS test
+COPY tests ./tests

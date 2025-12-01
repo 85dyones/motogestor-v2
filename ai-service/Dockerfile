@@ -18,3 +18,7 @@ COPY . .
 ENV PORT=5005
 
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} wsgi:app"]
+
+# Test target: CI can build this target and run tests inside the container.
+FROM runtime AS test
+COPY tests ./tests

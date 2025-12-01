@@ -25,3 +25,51 @@ Observações de segurança
 - Não commit IDs de tokens ou chaves no `.env` do repositório. Use os secrets do painel.
 - Habilite backups do volume do Postgres no servidor Easypanel.
 
+CI / validação automática
+
+Há um workflow de CI no repositório (`.github/workflows/ci-build-and-test.yml`) que valida automaticamente os Dockerfiles construindo as imagens (sem fazer push) e executa testes quando presentes (por exemplo `users-service/tests`). Esse workflow roda em pull requests e em pushes para `main` — ele ajuda a prevenir regressões de build antes do merge.
+
+Publicação automática de imagens (opcional)
+
+Além da validação, o mesmo workflow possui um job de publicação que *constrói e publica* as imagens no GitHub Container Registry (GHCR) quando você faz push para `main` ou criar uma tag do tipo `vX.Y.Z`.
+
+Requisitos / permissões:
+- O job usa o `GITHUB_TOKEN` para autenticação com o GHCR. Ele precisa de permissão `packages: write` (o workflow já configura isso) — ao usar o token padrão do Actions, garanta que o repositório e a organização permitam publicação com o `GITHUB_TOKEN`.
+- Se preferir usar um PAT (personal access token) com escopo `write:packages`, configure-o em `Settings → Secrets` como `CR_PAT` e atualize o workflow para usá-lo.
+
+Tags e versionamento:
+- O workflow gera tags semânticas a partir de tags de release (ex: `v1.2.3`) e também marca `latest` quando for o branch padrão.
+
+Se não quiser publicar automaticamente, você pode manter o workflow apenas para validação e manter a publicação manual ou controlada em outro workflow.
+
+Nota sobre testes em-container
+
+Os Dockerfiles foram atualizados para incluir um stage `test` (target `test`) que copia a pasta `tests/` para dentro da imagem. O workflow de CI agora constrói esse target e executa os testes dentro da imagem para garantir que o ambiente interno da imagem também passa nos testes. Isso não altera a imagem final usada em produção (o target `test` é apenas um stage de build adicional).
+
+Rodando testes de integração localmente
+
+Se quiser rodar os testes de integração localmente (antes do CI):
+
+1. Usando docker-compose (faz o serviço Postgres):
+	 - inicie o compose (ou apenas o serviço Postgres):
+
+		 docker compose up -d postgres
+
+	 - exporte as variáveis de ambiente para apontar para o Postgres (exemplo):
+
+		 export APP_ENV=development
+		 export POSTGRES_USER=motogestor
+		 export POSTGRES_PASSWORD=motogestor_pwd
+		 export POSTGRES_HOST=localhost
+		 export POSTGRES_DB=motogestor_integration
+
+	 - rode os testes de integração do users-service:
+
+		 python -m pytest users-service/tests/integration -q
+
+2. Usando um container Postgres isolado:
+
+		 docker run -d --name pg-test -e POSTGRES_USER=motogestor -e POSTGRES_PASSWORD=motogestor_pwd -e POSTGRES_DB=motogestor_integration -p 5432:5432 postgres:15
+
+	 - e então rode os mesmos comandos de export e pytest do passo anterior.
+
