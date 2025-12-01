@@ -1,4 +1,16 @@
-version: "3.9"
+# NOTE: Docker Compose 'version' key is obsolete with modern Compose CLI and may produce
+# a warning on some systems (eg. Easypanel). Remove it (or leave it removed) so Compose
+# uses the default, newer schema.
+#
+# IMPORTANT: this file uses images hosted on GHCR (ghcr.io). If the images are private
+# you must either:
+#  - Authenticate the host (or Easypanel registry settings) with `docker login ghcr.io` using
+#    a Personal Access Token (scope: read:packages) so the host can pull images, OR
+#  - Make the packages public in GHCR, OR
+#  - Replace the `image:` entries below with `build:` blocks so Easypanel builds the
+#    images from the repository's Dockerfiles locally on the server.
+#
+# Examples and instructions are included in docs/easypanel-deploy-easypanel.md
 
 # Compose file prepared for Easypanel deployments.
 # Replace the image placeholders with your registry images (ex: ghcr.io/85dyones/motogestor-v2-users:latest)
@@ -37,7 +49,10 @@ services:
       retries: 5
 
   users-service:
-    image: ghcr.io/85dyones/motogestor-v2-users:latest
+    # Changed to build locally so Easypanel can build the image from this repo's Dockerfile
+    build:
+      context: ./users-service
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - .env
@@ -59,7 +74,9 @@ services:
       retries: 5
 
   management-service:
-    image: ghcr.io/85dyones/motogestor-v2-management:latest
+    build:
+      context: ./management-service
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - .env
@@ -75,7 +92,9 @@ services:
       - postgres
 
   financial-service:
-    image: ghcr.io/85dyones/motogestor-v2-financial:latest
+    build:
+      context: ./financial-service
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - .env
@@ -91,7 +110,9 @@ services:
       - postgres
 
   teamcrm-service:
-    image: ghcr.io/85dyones/motogestor-v2-teamcrm:latest
+    build:
+      context: ./teamcrm-service
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - .env
@@ -107,7 +128,9 @@ services:
       - postgres
 
   ai-service:
-    image: ghcr.io/85dyones/motogestor-v2-ai:latest
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - .env
@@ -119,7 +142,9 @@ services:
       - users-service
 
   api-gateway:
-    image: ghcr.io/85dyones/motogestor-v2-gateway:latest
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - .env
