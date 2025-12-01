@@ -22,10 +22,10 @@ jobs:
             has_tests: true
           - name: api-gateway
             path: api-gateway
-            has_tests: false
+            has_tests: true
           - name: management-service
             path: management-service
-            has_tests: false
+            has_tests: true
           - name: financial-service
             path: financial-service
             has_tests: false
