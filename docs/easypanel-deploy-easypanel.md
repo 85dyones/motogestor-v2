@@ -25,3 +25,7 @@ Observações de segurança
 - Não commit IDs de tokens ou chaves no `.env` do repositório. Use os secrets do painel.
 - Habilite backups do volume do Postgres no servidor Easypanel.
 
+CI / validação automática
+
+Há um workflow de CI no repositório (`.github/workflows/ci-build-and-test.yml`) que valida automaticamente os Dockerfiles construindo as imagens (sem fazer push) e executa testes quando presentes (por exemplo `users-service/tests`). Esse workflow roda em pull requests e em pushes para `main` — ele ajuda a prevenir regressões de build antes do merge.
+
