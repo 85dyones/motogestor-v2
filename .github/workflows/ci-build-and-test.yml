@@ -1,0 +1,70 @@
+name: CI - build & test
+
+on:
+  pull_request: {}
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: users-service
+            path: users-service
+            has_tests: true
+          - name: api-gateway
+            path: api-gateway
+            has_tests: false
+          - name: management-service
+            path: management-service
+            has_tests: false
+          - name: financial-service
+            path: financial-service
+            has_tests: false
+          - name: teamcrm-service
+            path: teamcrm-service
+            has_tests: false
+          - name: ai-service
+            path: ai-service
+            has_tests: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ matrix.service.path }}
+          push: false
+          outputs: type=oci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Show image build info
+        run: |
+          echo "Built context: ${{ matrix.service.path }}"
+
+      - name: Run tests (if present)
+        if: ${{ matrix.service.has_tests == true }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install and run tests
+        if: ${{ matrix.service.has_tests == true }}
+        run: |
+          # install service deps (if file exists)
+          if [ -f "${{ matrix.service.path }}/requirements.txt" ]; then
+            python -m pip install -r "${{ matrix.service.path }}/requirements.txt"
+          fi
+          # run pytest for the service
+          python -m pytest -q "${{ matrix.service.path }}/tests"
