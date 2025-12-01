@@ -29,3 +29,16 @@ CI / validação automática
 
 Há um workflow de CI no repositório (`.github/workflows/ci-build-and-test.yml`) que valida automaticamente os Dockerfiles construindo as imagens (sem fazer push) e executa testes quando presentes (por exemplo `users-service/tests`). Esse workflow roda em pull requests e em pushes para `main` — ele ajuda a prevenir regressões de build antes do merge.
 
+Publicação automática de imagens (opcional)
+
+Além da validação, o mesmo workflow possui um job de publicação que *constrói e publica* as imagens no GitHub Container Registry (GHCR) quando você faz push para `main` ou criar uma tag do tipo `vX.Y.Z`.
+
+Requisitos / permissões:
+- O job usa o `GITHUB_TOKEN` para autenticação com o GHCR. Ele precisa de permissão `packages: write` (o workflow já configura isso) — ao usar o token padrão do Actions, garanta que o repositório e a organização permitam publicação com o `GITHUB_TOKEN`.
+- Se preferir usar um PAT (personal access token) com escopo `write:packages`, configure-o em `Settings → Secrets` como `CR_PAT` e atualize o workflow para usá-lo.
+
+Tags e versionamento:
+- O workflow gera tags semânticas a partir de tags de release (ex: `v1.2.3`) e também marca `latest` quando for o branch padrão.
+
+Se não quiser publicar automaticamente, você pode manter o workflow apenas para validação e manter a publicação manual ou controlada em outro workflow.
+
