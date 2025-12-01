@@ -6,6 +6,7 @@ on:
       - "v*.*.*"
     branches:
       - main
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -46,7 +47,8 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # Try a user-provided PAT first (GHCR_PAT). Fall back to GITHUB_TOKEN when available.
+          password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata
         id: meta
