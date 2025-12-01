@@ -46,3 +46,30 @@ Nota sobre testes em-container
 
 Os Dockerfiles foram atualizados para incluir um stage `test` (target `test`) que copia a pasta `tests/` para dentro da imagem. O workflow de CI agora constrói esse target e executa os testes dentro da imagem para garantir que o ambiente interno da imagem também passa nos testes. Isso não altera a imagem final usada em produção (o target `test` é apenas um stage de build adicional).
 
+Rodando testes de integração localmente
+
+Se quiser rodar os testes de integração localmente (antes do CI):
+
+1. Usando docker-compose (faz o serviço Postgres):
+	 - inicie o compose (ou apenas o serviço Postgres):
+
+		 docker compose up -d postgres
+
+	 - exporte as variáveis de ambiente para apontar para o Postgres (exemplo):
+
+		 export APP_ENV=development
+		 export POSTGRES_USER=motogestor
+		 export POSTGRES_PASSWORD=motogestor_pwd
+		 export POSTGRES_HOST=localhost
+		 export POSTGRES_DB=motogestor_integration
+
+	 - rode os testes de integração do users-service:
+
+		 python -m pytest users-service/tests/integration -q
+
+2. Usando um container Postgres isolado:
+
+		 docker run -d --name pg-test -e POSTGRES_USER=motogestor -e POSTGRES_PASSWORD=motogestor_pwd -e POSTGRES_DB=motogestor_integration -p 5432:5432 postgres:15
+
+	 - e então rode os mesmos comandos de export e pytest do passo anterior.
+
