@@ -37,6 +37,11 @@ Requisitos / permissões:
 - O job usa o `GITHUB_TOKEN` para autenticação com o GHCR. Ele precisa de permissão `packages: write` (o workflow já configura isso) — ao usar o token padrão do Actions, garanta que o repositório e a organização permitam publicação com o `GITHUB_TOKEN`.
 - Se preferir usar um PAT (personal access token) com escopo `write:packages`, configure-o em `Settings → Secrets` como `CR_PAT` e atualize o workflow para usá-lo.
 
+Nota de segurança e práticas recomendadas
+
+- **Publicação apenas por tags**: por segurança e reprodutibilidade, o workflow de publicação foi configurado para rodar somente quando uma *tag semântica* (ex: `v1.2.3`) for criada. Isso evita a publicação de imagens instáveis sempre que houver um push pra branch `main`.
+- **Token de publicação (CR_PAT)**: o workflow exige um Personal Access Token com scope `write:packages` e espera encontrá-lo em `Settings → Secrets` sob o nome `CR_PAT`. Não use `GITHUB_TOKEN` para publicações automáticas em produção (o PAT é preferível).
+
 Tags e versionamento:
 - O workflow gera tags semânticas a partir de tags de release (ex: `v1.2.3`) e também marca `latest` quando for o branch padrão.
 
