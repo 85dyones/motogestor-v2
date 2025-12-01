@@ -22,3 +22,7 @@ ENV PORT=5000
 EXPOSE 5000
 
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} wsgi:app"]
+
+# Test target: optional stage for CI to include tests in the image (if they exist).
+FROM runtime AS test
+COPY tests ./tests
