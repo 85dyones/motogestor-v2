@@ -25,7 +25,9 @@ def client(app):
 def auth_headers(app, identity: dict):
     # create token inside app context so JWTManager is available
     with app.app_context():
-        token = create_access_token(identity=identity)
+        # create_access_token expects a subject (sub) string; pass identity as sub and
+        # include tenant/role in additional_claims so get_jwt() returns them
+        token = create_access_token(identity=str(identity.get('sub', '1')), additional_claims={'tenant_id': identity.get('tenant_id'), 'role': identity.get('role')})
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -37,7 +39,7 @@ def test_health(client):
 
 def test_create_and_get_customer(client):
     # create token with tenant_id and owner role
-    headers = auth_headers(app, {"tenant_id": 1, "role": "owner"})
+    headers = auth_headers(client.application, {"tenant_id": 1, "role": "owner"})
 
     # create customer
     resp = client.post("/customers/", json={"name": "Cliente Teste"}, headers=headers)

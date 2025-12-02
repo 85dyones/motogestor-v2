@@ -2,7 +2,12 @@ import pytest
 
 
 def test_health_endpoint():
+    import os
     from app import create_app
+
+    # Ensure test DB uses sqlite in-memory so create_app doesn't attempt to connect to postgres
+    os.environ.setdefault("APP_ENV", "test")
+    os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
     app = create_app()
     client = app.test_client()
