@@ -121,10 +121,10 @@ jobs:
             path: ./users-service
           - name: api-gateway
             path: ./api-gateway
-          - name: management-service
+              has_tests: true
             path: ./management-service
           - name: financial-service
-            path: ./financial-service
+              has_tests: true
           - name: teamcrm-service
             path: ./teamcrm-service
           - name: ai-service
