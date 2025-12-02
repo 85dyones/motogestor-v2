@@ -1,6 +1,21 @@
 # Deploy no Easypanel (Hostinger)
 
-Este guia assume que você já criou o projeto no Easypanel e que o repositório foi clonado na VPS. Ele usa o `docker-compose.prod.yml` existente e foca na execução em modo production.
+Este guia assume que você já criou o projeto no Easypanel e que o repositório foi clonado na VPS. Ele usa o `docker-compose.prod.yml` (otimizado com imagens do GHCR) para evitar problemas de build remoto.
+
+## ⚠️ Importante: Qual arquivo Docker Compose usar?
+
+- **`docker-compose.prod.yml`** ← **Use este arquivo no Easypanel**
+  - Usa imagens pré-construídas do GHCR (recomendado para production e Easypanel).
+  - Evita erros de build remoto e é mais rápido para deploy.
+  - Não requer que os Dockerfiles estejam no servidor.
+
+- **`docker-compose.yml`** (desenvolvimento)
+  - Usa `build:` para construir imagens localmente.
+  - Use apenas localmente na máquina de desenvolvimento.
+
+- **`docker-compose.easypanel.yml`** (compatível, mantido para referência)
+  - Equivalente ao `docker-compose.prod.yml`, usa imagens GHCR.
+  - Pode ser usado alternativamente, mas `prod.yml` é a versão principal.
 
 ## Variáveis de ambiente
 Crie um arquivo `.env` na raiz do repositório com pelo menos:
@@ -18,7 +33,9 @@ O `docker-compose.prod.yml` já referencia o `.env` automaticamente. No Easypane
 ## Passos de deploy
 1. Garanta que o Docker e o Docker Compose estão instalados na VPS (Easypanel já traz Docker).
 2. Faça login no painel e crie um projeto que rode um comando customizado (via "Docker Compose App").
-3. No campo de comando, use `docker compose -f docker-compose.prod.yml up -d --build`.
+3. No campo de comando, use `docker compose -f docker-compose.prod.yml up -d`.
+   - **Não use `--build`** (as imagens já estão construídas no GHCR).
+   - Se a configuração do Easypanel não permitir remover `--build`, adicione um `.dockerignore` ou ignore o erro se apenas imagens forem puxadas.
 4. Para aplicar migrations antes de subir os serviços, rode manualmente:
    ```
    docker compose -f docker-compose.prod.yml run --rm users-service flask db upgrade
@@ -56,7 +73,7 @@ Se preferir que o Easypanel faça o clone direto do GitHub (com atualizações c
    - **Ramo**: `main` (ou outro branch de produção)
    - **Caminho de Build**: `/` (raiz do repo)
    - **Arquivo Docker Compose**: `docker-compose.prod.yml`
-3. Confirme o app; o Easypanel fará o clone e executará `docker compose -f docker-compose.prod.yml up -d --build` usando seu `.env`.
+3. Confirme o app; o Easypanel fará o clone e executará `docker compose -f docker-compose.prod.yml up -d` usando seu `.env`.
 4. Para atualizar, faça push no branch monitorado e use o botão de **Atualizar**/redeploy no painel. Se quiser automatizar, habilite webhooks do GitHub apontando para o endpoint de auto-deploy do Easypanel.
 
 > Dica: mantenha o `.env` cadastrado no painel (não versionado) e habilite "Recriar containers" no redeploy para garantir que novas imagens sejam aplicadas.
