@@ -3,14 +3,18 @@ import json
 import os
 from typing import Optional
 
-from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, get_jwt
 from openai import OpenAI
 
 from .models import AiRequestLog, db
 
 
 def get_current_identity():
-    return get_jwt_identity() or {}
+    identity = get_jwt_identity()
+    if isinstance(identity, dict):
+        return identity
+    claims = get_jwt()
+    return claims or {}
 
 
 def get_current_tenant_id():

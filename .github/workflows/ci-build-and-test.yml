@@ -28,13 +28,13 @@ jobs:
             has_tests: true
           - name: financial-service
             path: financial-service
-            has_tests: false
+            has_tests: true
           - name: teamcrm-service
             path: teamcrm-service
-            has_tests: false
+            has_tests: true
           - name: ai-service
             path: ai-service
-            has_tests: false
+            has_tests: true
 
     steps:
       - name: Checkout
