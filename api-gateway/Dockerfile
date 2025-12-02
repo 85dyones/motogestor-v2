@@ -15,8 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY api-gateway/app ./app
 COPY api-gateway/wsgi.py .
 
-# build do frontend já deve existir em frontend/dist
-COPY frontend/dist ./frontend/dist
+# Note: Frontend dist is served separately or mounted as a volume in production
+# If you need to embed static files, ensure frontend/dist exists and adjust the build context
 
 ENV PORT=5000
 EXPOSE 5000
