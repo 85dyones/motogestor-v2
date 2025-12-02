@@ -64,8 +64,7 @@ jobs:
       - name: Build and push ${{ matrix.service.name }}
         uses: docker/build-push-action@v4
         with:
-          context: .
-          file: ${{ matrix.service.path }}/Dockerfile
+          context: ${{ matrix.service.path }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
