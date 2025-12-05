@@ -1,4 +1,7 @@
-version: "3.9"
+ # NOTE: the `version` key is obsolete for modern Docker Compose CLI and can be ignored on some platforms.
+ # This file is intended for local development — use `build:` for services when you want them
+ # built from the repository's Dockerfiles. Keep `image:` only for pre-built/public images.
+
 services:
   postgres:
     image: postgres:15

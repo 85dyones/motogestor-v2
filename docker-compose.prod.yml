@@ -1,4 +1,8 @@
-version: "3.9"
+ # NOTE: the `version` key is obsolete for modern Docker Compose CLI and may cause warnings.
+ # For production flows you can either use `image:` (recommended when running immutable images
+ # from a registry) or `build:` if your deployment flow builds the image on the host. The
+ # Easypanel workflow supports both depending on how you configure the stack.
+
 services:
   postgres:
     image: postgres:15
