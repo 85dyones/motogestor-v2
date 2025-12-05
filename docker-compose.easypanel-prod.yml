@@ -1,8 +1,10 @@
 version: "3.9"
 
+x-image-tag: &image_tag ${IMAGE_TAG:-0.0.1}
+
 # Production-ready Compose file for Easypanel deployment
-# Uses pre-built images from GHCR instead of building locally
-# This avoids build context path errors on remote servers
+# Uses pre-built images from GHCR instead of building locally (tagged with IMAGE_TAG, default 0.0.1)
+# This avoids build context path errors on remote servers and prevents accidental pulls of :latest
 
 services:
   postgres:
@@ -35,7 +37,7 @@ services:
       retries: 5
 
   users-service:
-    image: ghcr.io/85dyones/motogestor-v2-users:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-users:*image_tag
     restart: always
     env_file:
       - .env
@@ -58,7 +60,7 @@ services:
       retries: 5
 
   management-service:
-    image: ghcr.io/85dyones/motogestor-v2-management:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-management:*image_tag
     restart: always
     env_file:
       - .env
@@ -75,7 +77,7 @@ services:
         condition: service_healthy
 
   financial-service:
-    image: ghcr.io/85dyones/motogestor-v2-financial:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-financial:*image_tag
     restart: always
     env_file:
       - .env
@@ -92,7 +94,7 @@ services:
         condition: service_healthy
 
   teamcrm-service:
-    image: ghcr.io/85dyones/motogestor-v2-teamcrm:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-teamcrm:*image_tag
     restart: always
     env_file:
       - .env
@@ -109,7 +111,7 @@ services:
         condition: service_healthy
 
   ai-service:
-    image: ghcr.io/85dyones/motogestor-v2-ai:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-ai:*image_tag
     restart: always
     env_file:
       - .env
@@ -121,7 +123,7 @@ services:
       - users-service
 
   api-gateway:
-    image: ghcr.io/85dyones/motogestor-v2-gateway:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-gateway:*image_tag
     restart: always
     env_file:
       - .env
