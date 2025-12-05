@@ -8,16 +8,17 @@ from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
 
 from .config import load_config
 from .identity import extract_tenant_context
-from .logging_setup import setup_logging
+from .observability import register_observability
 from .routes_auth import bp as auth_bp
 from .routes_services import bp as services_bp
 
 
 def create_app():
-    setup_logging()
+    service_name = "api-gateway"
     cfg = load_config()
 
     app = Flask(__name__)
+    register_observability(app, service_name)
 
     # JWT (deve usar o MESMO segredo dos outros serviços)
     app.config["JWT_SECRET_KEY"] = cfg.jwt_secret_key

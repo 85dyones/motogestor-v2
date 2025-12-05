@@ -1,0 +1,34 @@
+version: "3.9"
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+# Prometheus scrape config
+# Save as prometheus.yml next to this compose file
+#
+# global:
+#   scrape_interval: 15s
+# scrape_configs:
+#   - job_name: "motogestor-services"
+#     static_configs:
+#       - targets:
+#           - "api-gateway:5000"
+#           - "users-service:5001"
+#           - "management-service:5002"
+#           - "financial-service:5003"
+#           - "teamcrm-service:5004"
+#           - "ai-service:5005"
+#     metrics_path: /metrics

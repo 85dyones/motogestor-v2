@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
-from app.config import load_config
-from app.models import Tenant, User, db  # noqa: F401
 from sqlalchemy import engine_from_config, pool
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from app.config import load_config  # noqa: E402
+from app.models import Tenant, User, db  # noqa: E402, F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

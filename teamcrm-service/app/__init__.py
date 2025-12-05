@@ -5,10 +5,13 @@ from flask import Flask
 from flask_jwt_extended import JWTManager
 
 from .models import db
+from .observability import register_observability
+from .tenant_guard import inject_current_tenant_from_token
 
 
 def create_app():
     app = Flask(__name__)
+    register_observability(app, "teamcrm-service")
 
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret")
     app.config["ENV"] = os.getenv("APP_ENV", "development")
@@ -22,6 +25,10 @@ def create_app():
 
     db.init_app(app)
     jwt = JWTManager(app)  # noqa: F841
+
+    @app.before_request
+    def inject_tenant():
+        inject_current_tenant_from_token(optional=True)
 
     from .routes_dashboard import bp as dash_bp
     from .routes_interactions import bp as inter_bp
