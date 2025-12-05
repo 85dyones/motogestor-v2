@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
-from app.models import (
+from sqlalchemy import engine_from_config, pool
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from app.models import (  # noqa: E402, F401
     Customer,
     Motorcycle,
     Part,
@@ -12,8 +18,7 @@ from app.models import (
     ServiceOrder,
     StockMovement,
     db,
-)  # noqa: F401
-from sqlalchemy import engine_from_config, pool
+)
 
 config = context.config
 

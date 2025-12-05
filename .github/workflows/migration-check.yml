@@ -63,4 +63,5 @@ jobs:
         working-directory: ${{ matrix.path }}
         env:
           DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/${{ matrix.db }}
+          PYTHONPATH: ${{ matrix.path }}
         run: alembic upgrade head
