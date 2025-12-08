@@ -5,7 +5,7 @@ Este guia assume que você já criou o projeto no Easypanel e que o repositório
 ## ⚠️ Importante: Qual arquivo Docker Compose usar?
 
 - **`docker-compose.prod.yml`** ← **Use este arquivo no Easypanel**
-  - Usa imagens pré-construídas do GHCR (recomendado para production e Easypanel).
+  - Usa imagens pré-construídas do GHCR (recomendado para production e Easypanel). Defina `IMAGE_TAG` (padrão `0.0.1`) para apontar para a tag publicada; deixar vazio resulta em referência de imagem inválida.
   - Evita erros de build remoto e é mais rápido para deploy.
   - Não requer que os Dockerfiles estejam no servidor.
 
