@@ -6,6 +6,7 @@ from app.models import db
 @pytest.fixture()
 def app(monkeypatch):
     monkeypatch.setenv("APP_ENV", "test")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
     application = create_app()
     with application.app_context():
         db.create_all()

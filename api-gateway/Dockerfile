@@ -15,9 +15,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY api-gateway/app ./app
 COPY api-gateway/wsgi.py .
 
-# build do frontend já deve existir em frontend/dist
-COPY frontend/dist ./frontend/dist
-
 ENV PORT=5000
 EXPOSE 5000
 

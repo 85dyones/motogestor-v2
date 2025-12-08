@@ -3,7 +3,7 @@ name: CI - build, test & publish
 on:
   pull_request: {}
   push:
-    branches: [main]
+    # publish will only run for tags (release/semantic tags). Avoid publishing on every push to main.
     tags:
       - "v*.*.*"
 
@@ -22,19 +22,19 @@ jobs:
             has_tests: true
           - name: api-gateway
             path: api-gateway
-            has_tests: false
+            has_tests: true
           - name: management-service
             path: management-service
-            has_tests: false
+            has_tests: true
           - name: financial-service
             path: financial-service
-            has_tests: false
+            has_tests: true
           - name: teamcrm-service
             path: teamcrm-service
-            has_tests: false
+            has_tests: true
           - name: ai-service
             path: ai-service
-            has_tests: false
+            has_tests: true
 
     steps:
       - name: Checkout
@@ -104,7 +104,8 @@ jobs:
     name: Build & push images to GHCR
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) }}
+    # publish should only run when pushing tags (e.g. 'v1.2.3')
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
     permissions:
       contents: read
       packages: write
@@ -120,10 +121,10 @@ jobs:
             path: ./users-service
           - name: api-gateway
             path: ./api-gateway
-          - name: management-service
+              has_tests: true
             path: ./management-service
           - name: financial-service
-            path: ./financial-service
+              has_tests: true
           - name: teamcrm-service
             path: ./teamcrm-service
           - name: ai-service
@@ -136,13 +137,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Ensure CR_PAT secret is set
+        run: |
+          if [ -z "${{ secrets.CR_PAT }}" ]; then
+            echo "CR_PAT secret is not set. Create a personal access token and add it to repo secrets as CR_PAT.";
+            exit 1;
+          fi
+
       - name: Log in to Container Registry (GHCR)
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          # prefer a personal token CR_PAT (set in repo secrets), fallback to GITHUB_TOKEN
-          password: ${{ secrets.CR_PAT || secrets.GITHUB_TOKEN }}
+          # Require a personal token CR_PAT stored in repo secrets for publishing
+          password: ${{ secrets.CR_PAT }}
 
       - name: Extract metadata
         id: meta
@@ -206,3 +214,122 @@ jobs:
       - name: Run integration tests
         run: |
           pytest -q users-service/tests/integration
+
+  e2e-tests:
+    name: E2E (Postgres + users-service + api-gateway)
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    env:
+      E2E_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (build frontend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build frontend (api-gateway expects frontend/dist)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Set up QEMU and Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build users-service image for E2E
+        uses: docker/build-push-action@v4
+        with:
+          context: ./users-service
+          push: false
+          load: true
+          tags: motogestor-users-e2e:${{ env.E2E_TAG }}
+
+      - name: Build api-gateway image for E2E
+        uses: docker/build-push-action@v4
+        with:
+          context: ./api-gateway
+          push: false
+          load: true
+          tags: motogestor-gateway-e2e:${{ env.E2E_TAG }}
+
+      - name: Build management-service image for E2E
+        uses: docker/build-push-action@v4
+        with:
+          context: ./management-service
+          push: false
+          load: true
+          tags: motogestor-management-e2e:${{ env.E2E_TAG }}
+
+      - name: Build management-service image for E2E
+        uses: docker/build-push-action@v4
+        with:
+          context: ./management-service
+          push: false
+          load: true
+          tags: motogestor-management-e2e:${{ env.E2E_TAG }}
+
+      - name: Create network for E2E
+        run: |
+          docker network create e2e-net || true
+
+      - name: Start Postgres
+        run: |
+          docker run -d --name e2e-postgres --network e2e-net -e POSTGRES_USER=motogestor -e POSTGRES_PASSWORD=motogestor_pwd -e POSTGRES_DB=motogestor_integration postgres:15
+
+      - name: Start Redis
+        run: |
+          docker run -d --name e2e-redis --network e2e-net redis:7
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do docker exec e2e-postgres pg_isready -U motogestor && break || sleep 1; done
+
+      - name: Start users-service (E2E)
+        run: |
+          docker run -d --name e2e-users --network e2e-net -e APP_ENV=development -e DATABASE_URL="postgresql://motogestor:motogestor_pwd@e2e-postgres:5432/motogestor_integration" -p 5001:5001 motogestor-users-e2e:${{ env.E2E_TAG }}
+
+      - name: Start management-service (E2E)
+        run: |
+          docker run -d --name e2e-management --network e2e-net -e APP_ENV=development -e DATABASE_URL="postgresql://motogestor:motogestor_pwd@e2e-postgres:5432/motogestor_integration" -p 5002:5002 motogestor-management-e2e:${{ env.E2E_TAG }}
+
+      - name: Wait for users-service
+        run: |
+          for i in {1..30}; do curl -sSf http://localhost:5001/health && break || sleep 1; done
+
+      - name: Start api-gateway (E2E)
+        run: |
+          docker run -d --name e2e-gateway --network e2e-net -e APP_ENV=development -e USERS_SERVICE_URL=http://e2e-users:5001 -e JWT_SECRET_KEY=dev-secret -p 8080:5000 motogestor-gateway-e2e:${{ env.E2E_TAG }}
+
+      - name: Wait for api-gateway
+        run: |
+          for i in {1..30}; do curl -sSf http://localhost:8080/health && break || sleep 1; done
+
+      - name: Start management-service (E2E)
+        run: |
+          docker run -d --name e2e-management --network e2e-net -e APP_ENV=development -e DATABASE_URL="postgresql://motogestor:motogestor_pwd@e2e-postgres:5432/motogestor_integration" -p 5002:5002 motogestor-management-e2e:${{ env.E2E_TAG }}
+
+      - name: Wait for management-service
+        run: |
+          for i in {1..30}; do curl -sSf http://localhost:5002/health && break || sleep 1; done
+
+      - name: Seed demo user via users-service and login via gateway (E2E flow)
+        run: |
+          # Seed demo user directly
+          curl -sSf -X POST http://localhost:5001/users/seed-demo
+          # Login via api-gateway (forwards to users-service)
+          curl -sSf -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" -d '{"email": "demo@motogestor.com", "password": "demo123"}' | jq .
+          # Confirm gateway forwarding to management-service (health)
+          curl -sSf http://localhost:8080/management/health | jq .
+
+          # Check management-service health via gateway proxy
+          curl -sSf http://localhost:8080/management/health
+
+      - name: Cleanup E2E containers
+        if: always()
+        run: |
+          docker rm -f e2e-gateway e2e-users e2e-postgres e2e-redis || true
