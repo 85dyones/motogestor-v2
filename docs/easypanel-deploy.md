@@ -5,7 +5,7 @@ Este guia assume que você já criou o projeto no Easypanel e que o repositório
 ## ⚠️ Importante: Qual arquivo Docker Compose usar?
 
 - **`docker-compose.prod.yml`** ← **Use este arquivo no Easypanel**
-  - Usa imagens pré-construídas do GHCR (recomendado para production e Easypanel).
+  - Usa imagens pré-construídas do GHCR (recomendado para production e Easypanel). Defina `IMAGE_TAG` (padrão `0.0.1`) para apontar para a tag publicada; deixar vazio resulta em referência de imagem inválida.
   - Evita erros de build remoto e é mais rápido para deploy.
   - Não requer que os Dockerfiles estejam no servidor.
 
@@ -32,11 +32,17 @@ O `docker-compose.prod.yml` já referencia o `.env` automaticamente. No Easypane
 
 ## Passos de deploy
 1. Garanta que o Docker e o Docker Compose estão instalados na VPS (Easypanel já traz Docker).
-2. Faça login no painel e crie um projeto que rode um comando customizado (via "Docker Compose App").
-3. No campo de comando, use `docker compose -f docker-compose.prod.yml up -d`.
+2. **Autentique no GHCR se as imagens forem privadas** (evita o erro `Head "https://ghcr.io/...": denied`):
+   ```bash
+   docker login ghcr.io -u <github-username> -p <token-com-read:packages>
+   ```
+   - O token precisa do escopo `read:packages`.
+   - Se estiver usando o script `deploy_staging.sh`, exporte `GHCR_USERNAME` e `GHCR_TOKEN` para ele fazer o login automaticamente.
+3. Faça login no painel e crie um projeto que rode um comando customizado (via "Docker Compose App").
+4. No campo de comando, use `IMAGE_TAG=0.0.1 docker compose -f docker-compose.prod.yml up -d`.
    - **Não use `--build`** (as imagens já estão construídas no GHCR).
    - Se a configuração do Easypanel não permitir remover `--build`, adicione um `.dockerignore` ou ignore o erro se apenas imagens forem puxadas.
-4. Para aplicar migrations antes de subir os serviços, rode manualmente:
+5. Para aplicar migrations antes de subir os serviços, rode manualmente:
    ```
    docker compose -f docker-compose.prod.yml run --rm users-service flask db upgrade
    ```

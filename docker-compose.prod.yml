@@ -1,5 +1,3 @@
-version: "3.9"
-
 # Production-ready Compose file for Easypanel deployment
 # Uses pre-built images from GHCR instead of building locally
 # This avoids build context path errors on remote servers

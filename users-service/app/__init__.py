@@ -1,21 +1,23 @@
 import time
 
 from flask import Flask, jsonify
-from flask_jwt_extended import JWTManager, verify_jwt_in_request
+from flask_jwt_extended import JWTManager
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
 from .config import load_config
 from .errors import register_error_handlers
-from .logging_setup import setup_logging
-from .models import db
-from .tenant import set_current_tenant_from_jwt
+from .models import RevokedToken, db
+from .observability import register_observability
+from .tenant_guard import inject_current_tenant_from_token
 
 
 def create_app() -> Flask:
-    setup_logging()
     cfg = load_config()
 
     app = Flask(__name__)
+    service_name = "users-service"
+    register_observability(app, service_name)
 
     app.config["ENV"] = cfg.app_env
     app.config["JWT_SECRET_KEY"] = cfg.jwt_secret_key
@@ -24,13 +26,19 @@ def create_app() -> Flask:
 
     db.init_app(app)
     jwt = JWTManager(app)  # noqa: F841
+    app.config.setdefault("JWT_BLOCKLIST_ENABLED", True)
+    app.config.setdefault("JWT_BLOCKLIST_TOKEN_CHECKS", ["access", "refresh"])
+
+    @jwt.token_in_blocklist_loader
+    def is_token_revoked(jwt_header, jwt_payload):  # type: ignore[unused-argument]
+        jti = jwt_payload.get("jti")
+        return RevokedToken.query.filter_by(jti=jti).first() is not None
 
     register_error_handlers(app)
 
     @app.before_request
     def inject_tenant_context():
-        verify_jwt_in_request(optional=True)  # carrega claims se existirem
-        set_current_tenant_from_jwt()
+        inject_current_tenant_from_token(optional=True)
 
     # Blueprints
     from .routes_auth import bp as auth_bp
@@ -44,7 +52,7 @@ def create_app() -> Flask:
     @app.route("/health")
     def health():
         try:
-            db.session.execute("SELECT 1")
+            db.session.execute(text("SELECT 1"))
             return {"status": "ok", "service": "users-service"}, 200
         except OperationalError:
             return jsonify({"status": "degraded", "service": "users-service"}), 503

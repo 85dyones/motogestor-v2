@@ -7,7 +7,9 @@ from flask_jwt_extended import jwt_required
 
 from .models import (Customer, Motorcycle, Part, ServiceItem, ServiceOrder,
                      StockMovement, db, recalc_order_totals)
+from .observability import OS_CREATED_COUNTER
 from .utils import get_current_tenant_id, is_manager_or_owner
+from .tenant_guard import tenant_guard
 
 bp = Blueprint("os", __name__)
 
@@ -88,6 +90,7 @@ def get_os(order_id):
 
 @bp.post("/")
 @jwt_required()
+@tenant_guard(body_keys=("tenant_id",))
 def create_os():
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
@@ -123,12 +126,14 @@ def create_os():
     )
     db.session.add(order)
     db.session.commit()
+    OS_CREATED_COUNTER.labels(tenant_id=str(tenant_id)).inc()
 
     return jsonify({"id": order.id, "status": order.status}), 201
 
 
 @bp.patch("/<int:order_id>")
 @jwt_required()
+@tenant_guard(path_key="tenant_id", body_keys=("tenant_id",))
 def update_os(order_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
@@ -150,6 +155,7 @@ def update_os(order_id):
 
 @bp.patch("/<int:order_id>/status")
 @jwt_required()
+@tenant_guard(path_key="tenant_id", body_keys=("tenant_id",))
 def update_os_status(order_id):
     if not is_manager_or_owner():
         return jsonify({"error": "permissão negada"}), 403
@@ -182,6 +188,7 @@ def update_os_status(order_id):
 
 @bp.post("/<int:order_id>/items")
 @jwt_required()
+@tenant_guard(path_key="tenant_id", body_keys=("tenant_id",))
 def add_os_item(order_id):
     tenant_id = get_current_tenant_id()
     data = request.get_json() or {}
