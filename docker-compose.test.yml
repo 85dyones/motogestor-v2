@@ -1,0 +1,141 @@
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    env_file:
+      - .env.test
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-motogestor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-motogestor}
+      POSTGRES_DB: ${POSTGRES_DB:-motogestor_test}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata-test:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-motogestor}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1000", "--loglevel", "warning"]
+    volumes:
+      - redisdata-test:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  users-service:
+    build: ./users-service
+    restart: unless-stopped
+    env_file:
+      - .env.test
+    environment:
+      APP_ENV: test
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-motogestor}:${POSTGRES_PASSWORD:-motogestor}@postgres:5432/${POSTGRES_DB:-motogestor_test}}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-motogestor_test}
+      POSTGRES_USER: ${POSTGRES_USER:-motogestor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-motogestor}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-test-secret}
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  management-service:
+    build: ./management-service
+    restart: unless-stopped
+    env_file:
+      - .env.test
+    environment:
+      APP_ENV: test
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-motogestor}:${POSTGRES_PASSWORD:-motogestor}@postgres:5432/${POSTGRES_DB:-motogestor_test}}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-motogestor_test}
+      POSTGRES_USER: ${POSTGRES_USER:-motogestor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-motogestor}
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  financial-service:
+    build: ./financial-service
+    restart: unless-stopped
+    env_file:
+      - .env.test
+    environment:
+      APP_ENV: test
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-motogestor}:${POSTGRES_PASSWORD:-motogestor}@postgres:5432/${POSTGRES_DB:-motogestor_test}}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-motogestor_test}
+      POSTGRES_USER: ${POSTGRES_USER:-motogestor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-motogestor}
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  teamcrm-service:
+    build: ./teamcrm-service
+    restart: unless-stopped
+    env_file:
+      - .env.test
+    environment:
+      APP_ENV: test
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-motogestor}:${POSTGRES_PASSWORD:-motogestor}@postgres:5432/${POSTGRES_DB:-motogestor_test}}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-motogestor_test}
+      POSTGRES_USER: ${POSTGRES_USER:-motogestor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-motogestor}
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./api-gateway
+    restart: unless-stopped
+    env_file:
+      - .env.test
+    environment:
+      APP_ENV: test
+      LOG_LEVEL: INFO
+      USERS_SERVICE_URL: http://users-service:5000
+      MANAGEMENT_SERVICE_URL: http://management-service:5000
+      FINANCIAL_SERVICE_URL: http://financial-service:5000
+      TEAMCRM_SERVICE_URL: http://teamcrm-service:5000
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      users-service:
+        condition: service_healthy
+      management-service:
+        condition: service_started
+      financial-service:
+        condition: service_started
+      teamcrm-service:
+        condition: service_started
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata-test:
+  redisdata-test:

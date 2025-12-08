@@ -1,10 +1,31 @@
 import os
+import subprocess
 import time
 import uuid
+from pathlib import Path
 from typing import Dict, Tuple
 
 import httpx
 import pytest
+
+
+def _bootstrap_stack_if_requested() -> bool:
+    if os.getenv("AUTO_START_STACK") != "1":
+        return False
+
+    script_path = Path(__file__).resolve().parents[1] / "start_stack.sh"
+    env = os.environ.copy()
+    env.setdefault("LEAVE_UP", "1")
+    env.setdefault("COMPOSE_FILE", env.get("COMPOSE_FILE", "docker-compose.test.yml"))
+    env.setdefault("ENV_FILE", env.get("ENV_FILE", ".env.test"))
+    env.setdefault("GATEWAY_PORT", env.get("GATEWAY_PORT", "5000"))
+    try:
+        subprocess.run([str(script_path)], env=env, check=True)
+    except FileNotFoundError:
+        pytest.skip("docker not installed; cannot bootstrap e2e stack")
+    except subprocess.CalledProcessError as exc:
+        pytest.skip(f"failed to bootstrap stack: {exc}")
+    return True
 
 
 @pytest.fixture(scope="session")
@@ -14,6 +35,7 @@ def base_url() -> str:
 
 @pytest.fixture(scope="session")
 def client(base_url: str):
+    started = False
     client = httpx.Client(base_url=base_url, timeout=30.0)
     for _ in range(30):
         try:
@@ -21,12 +43,24 @@ def client(base_url: str):
             if resp.status_code < 500:
                 break
         except Exception:
+            if not started:
+                started = _bootstrap_stack_if_requested()
+                if started:
+                    continue
             time.sleep(2)
             continue
     else:
         pytest.skip("api-gateway not reachable for e2e tests")
-    yield client
-    client.close()
+
+    try:
+        yield client
+    finally:
+        client.close()
+        if started:
+            teardown_env = os.environ.copy()
+            teardown_env.update({"TEARDOWN": "1", "LEAVE_UP": "0"})
+            script_path = Path(__file__).resolve().parents[1] / "start_stack.sh"
+            subprocess.run([str(script_path)], env=teardown_env, check=False)
 
 
 @pytest.fixture(scope="session")
