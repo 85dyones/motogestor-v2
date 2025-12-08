@@ -5,6 +5,8 @@ COMPOSE_FILE="docker-compose.prod.yml"
 ENV_FILE=".env"
 PROJECT_NAME="motogestor-staging"
 SERVICES_WITH_MIGRATIONS=(users-service management-service financial-service teamcrm-service)
+GHCR_USERNAME=${GHCR_USERNAME:-}
+GHCR_TOKEN=${GHCR_TOKEN:-}
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "[deploy] Arquivo ${ENV_FILE} não encontrado. Crie-o antes do deploy." >&2
@@ -20,6 +22,13 @@ export APP_ENV="${APP_ENV:-staging}"
 export COMPOSE_PROJECT_NAME="${PROJECT_NAME}"
 
 compose_cmd=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}")
+
+if [[ -n "${GHCR_USERNAME}" && -n "${GHCR_TOKEN}" ]]; then
+  echo "[deploy] Autenticando no GHCR como ${GHCR_USERNAME}..."
+  echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
+else
+  echo "[deploy] GHCR_USERNAME/GHCR_TOKEN não definidos; tentando pull anônimo (garanta permissão pública ou configure o login)." >&2
+fi
 
 echo "[deploy] Pulling imagens 0.0.1 do GHCR..."
 "${compose_cmd[@]}" pull postgres redis users-service management-service financial-service teamcrm-service ai-service api-gateway
