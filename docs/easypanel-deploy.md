@@ -9,6 +9,10 @@ Este guia assume que você já criou o projeto no Easypanel e que o repositório
   - Evita erros de build remoto e é mais rápido para deploy.
   - Não requer que os Dockerfiles estejam no servidor.
 
+- **`docker-compose.override.yml`** (quando o Easypanel força `docker-compose.yml` + `docker-compose.override.yml`)
+  - Este arquivo agora define todas as imagens GHCR com `${IMAGE_TAG:-0.0.1}` e remove o placeholder antigo `*image_tag` que gerava `invalid reference format`.
+  - Use a variável de ambiente `IMAGE_TAG=0.0.1` (ou a versão publicada) ao executar `docker compose -f docker-compose.yml -f docker-compose.override.yml up -d` no Easypanel.
+
 - **`docker-compose.yml`** (desenvolvimento)
   - Usa `build:` para construir imagens localmente.
   - Use apenas localmente na máquina de desenvolvimento.
