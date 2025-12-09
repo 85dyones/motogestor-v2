@@ -5,10 +5,12 @@ from flask import Flask
 from flask_jwt_extended import JWTManager
 
 from .models import db
+from .observability import register_observability
 
 
 def create_app():
     app = Flask(__name__)
+    register_observability(app, "ai-service")
 
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret")
     app.config["ENV"] = os.getenv("APP_ENV", "development")

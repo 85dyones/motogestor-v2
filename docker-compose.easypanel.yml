@@ -1,8 +1,6 @@
-version: "3.9"
-
 # Compose file prepared for Easypanel deployments.
-# Replace the image placeholders with your registry images (ex: ghcr.io/85dyones/motogestor-v2-users:latest)
-# Or keep build: sections if you want Easypanel to build from Dockerfiles on the server.
+# Uses GHCR images by default (tagged with IMAGE_TAG, default 0.0.1) to avoid accidental pulls of :latest.
+# If you prefer Easypanel to build from Dockerfiles on the server, replace `image:` with `build:` blocks.
 
 services:
   postgres:
@@ -37,7 +35,7 @@ services:
       retries: 5
 
   users-service:
-    image: ghcr.io/85dyones/motogestor-v2-users:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-users:${IMAGE_TAG:-0.0.1}
     restart: unless-stopped
     env_file:
       - .env
@@ -59,7 +57,7 @@ services:
       retries: 5
 
   management-service:
-    image: ghcr.io/85dyones/motogestor-v2-management:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-management:${IMAGE_TAG:-0.0.1}
     restart: unless-stopped
     env_file:
       - .env
@@ -75,7 +73,7 @@ services:
       - postgres
 
   financial-service:
-    image: ghcr.io/85dyones/motogestor-v2-financial:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-financial:${IMAGE_TAG:-0.0.1}
     restart: unless-stopped
     env_file:
       - .env
@@ -91,7 +89,7 @@ services:
       - postgres
 
   teamcrm-service:
-    image: ghcr.io/85dyones/motogestor-v2-teamcrm:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-teamcrm:${IMAGE_TAG:-0.0.1}
     restart: unless-stopped
     env_file:
       - .env
@@ -107,7 +105,7 @@ services:
       - postgres
 
   ai-service:
-    image: ghcr.io/85dyones/motogestor-v2-ai:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-ai:${IMAGE_TAG:-0.0.1}
     restart: unless-stopped
     env_file:
       - .env
@@ -119,7 +117,7 @@ services:
       - users-service
 
   api-gateway:
-    image: ghcr.io/85dyones/motogestor-v2-gateway:0.0.1
+    image: ghcr.io/85dyones/motogestor-v2-gateway:${IMAGE_TAG:-0.0.1}
     restart: unless-stopped
     env_file:
       - .env
