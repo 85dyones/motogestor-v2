@@ -2,24 +2,16 @@
 
 Este guia assume que você já criou o projeto no Easypanel e que o repositório foi clonado na VPS. Ele usa o `docker-compose.prod.yml` (otimizado com imagens do GHCR) para evitar problemas de build remoto.
 
-## ⚠️ Importante: Qual arquivo Docker Compose usar?
+## ⚠️ Qual arquivo Docker Compose usar?
 
 - **`docker-compose.prod.yml`** ← **Use este arquivo no Easypanel**
   - Usa imagens pré-construídas do GHCR (recomendado para production e Easypanel). Defina `IMAGE_TAG` (padrão `0.0.1`) para apontar para a tag publicada; deixar vazio resulta em referência de imagem inválida.
   - Evita erros de build remoto e é mais rápido para deploy.
   - Não requer que os Dockerfiles estejam no servidor.
 
-- **`docker-compose.override.yml`** (quando o Easypanel força `docker-compose.yml` + `docker-compose.override.yml`)
-  - Este arquivo agora define todas as imagens GHCR com `${IMAGE_TAG:-0.0.1}` e remove o placeholder antigo `*image_tag` que gerava `invalid reference format`.
-  - Use a variável de ambiente `IMAGE_TAG=0.0.1` (ou a versão publicada) ao executar `docker compose -f docker-compose.yml -f docker-compose.override.yml up -d` no Easypanel.
-
 - **`docker-compose.yml`** (desenvolvimento)
   - Usa `build:` para construir imagens localmente.
   - Use apenas localmente na máquina de desenvolvimento.
-
-- **`docker-compose.easypanel.yml`** (compatível, mantido para referência)
-  - Equivalente ao `docker-compose.prod.yml`, usa imagens GHCR.
-  - Pode ser usado alternativamente, mas `prod.yml` é a versão principal.
 
 ## Variáveis de ambiente
 Crie um arquivo `.env` na raiz do repositório com pelo menos:
@@ -90,7 +82,7 @@ Se preferir que o Easypanel faça o clone direto do GitHub (com atualizações c
 
 ## Testando o deploy localmente (pré-deployment)
 
-Antes de fazer deploy no Easypanel, teste o `docker-compose.easypanel.yml` localmente com imagens do GHCR:
+Antes de fazer deploy no Easypanel, teste o `docker-compose.prod.yml` localmente com imagens do GHCR:
 
 ### Pré-requisitos
 - Docker e Docker Compose instalados localmente.
@@ -127,17 +119,17 @@ Antes de fazer deploy no Easypanel, teste o `docker-compose.easypanel.yml` local
 
 4. **Validar a sintaxe do Compose:**
    ```bash
-   docker compose -f docker-compose.easypanel.yml config --env-file .env.test
+   docker compose -f docker-compose.prod.yml config --env-file .env.test
    ```
 
 5. **Iniciar os containers em background:**
    ```bash
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test up -d
+   IMAGE_TAG=0.0.1 docker compose -f docker-compose.prod.yml --env-file .env.test up -d
    ```
 
 6. **Verificar o status dos containers:**
    ```bash
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test ps
+   docker compose -f docker-compose.prod.yml --env-file .env.test ps
    # Todos devem estar como "healthy" ou "running" após alguns segundos
    ```
 
@@ -147,26 +139,26 @@ Antes de fazer deploy no Easypanel, teste o `docker-compose.easypanel.yml` local
    curl http://localhost/health
 
    # Health check do users-service (acesso direto)
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test exec users-service \
+   docker compose -f docker-compose.prod.yml --env-file .env.test exec users-service \
      curl -s http://localhost:5000/health
 
    # Listar bancos de dados Postgres
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test exec postgres \
+   docker compose -f docker-compose.prod.yml --env-file .env.test exec postgres \
      psql -U motogestor_test -d motogestor_test -c "\dt"
    ```
 
 8. **Verificar logs se houver erros:**
    ```bash
    # Logs de um serviço específico
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test logs -f api-gateway
+   docker compose -f docker-compose.prod.yml --env-file .env.test logs -f api-gateway
 
    # Logs de todos os serviços
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test logs -f
+   docker compose -f docker-compose.prod.yml --env-file .env.test logs -f
    ```
 
 9. **Parar e remover containers:**
    ```bash
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test down -v
+   docker compose -f docker-compose.prod.yml --env-file .env.test down -v
    # A flag `-v` remove também os volumes (dados do banco)
    ```
 
@@ -204,7 +196,7 @@ Após testar localmente e confirmar que tudo funciona:
 
 1. Entre no painel Easypanel/Hostinger.
 2. Crie um novo "Docker Compose App" ou atualize um existente.
-3. Cole o conteúdo de `docker-compose.easypanel.yml` ou aponte para a URL do repositório.
+3. Cole o conteúdo de `docker-compose.prod.yml` ou aponte para a URL do repositório.
 4. Configure as variáveis de ambiente conforme seção "[Variáveis de ambiente](#variáveis-de-ambiente)" acima.
 5. Habilite "Recreate containers on redeploy" para garantir que novas imagens sejam puxadas.
 6. Clique em "Deploy" ou "Atualizar".

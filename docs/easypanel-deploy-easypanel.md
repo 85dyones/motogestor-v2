@@ -13,9 +13,9 @@ docker push ghcr.io/85dyones/motogestor-v2-users:latest
 # repetir para api-gateway, management-service, financial-service, teamcrm-service, ai-service
 ```
 
-2. No repositório, há um arquivo `docker-compose.easypanel.yml` com placeholders `ghcr.io/...`. Substitua as tags por aquelas publicadas (ou use `:vX.Y.Z`).
+2. No repositório, use o arquivo `docker-compose.prod.yml` com as imagens `ghcr.io/...`. Substitua `IMAGE_TAG` pela versão publicada (ou use `:vX.Y.Z`).
 
-3. No Easypanel crie uma nova stack usando o arquivo `docker-compose.easypanel.yml` e configure variáveis de ambiente / secrets na UI.
+3. No Easypanel crie uma nova stack apontando para `docker-compose.prod.yml` e configure variáveis de ambiente / secrets na UI.
 
 4. Se preferir DB gerenciado, não inclua `postgres` no compose e configure `DATABASE_URL` apontando para o DB externo.
 

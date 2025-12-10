@@ -24,9 +24,6 @@ gunicorn --bind 0.0.0.0:8000 wsgi:app --workers 4 --access-logfile -
   - `os_created_total{tenant_id}` (aplicado no management-service ao criar OS).
 - Latência e contagem são alimentadas pelo middleware `after_request` que usa `g.route_label` e `g.trace_id`.
 
-### docker-compose.observability.yml
-Arquivo sugerido na raiz para subir Prometheus + Grafana já apontando para os endpoints dos serviços Flask.
-
 ## 3.3 Tracing com OpenTelemetry
 - Habilitado opcionalmente quando `OTEL_EXPORTER_OTLP_ENDPOINT` está definido.
 - `register_observability` inicializa o `TracerProvider` com `service.name` e exporta via OTLP/HTTP (respeita `OTEL_EXPORTER_OTLP_INSECURE=true|false`).
