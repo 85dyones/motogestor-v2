@@ -38,6 +38,7 @@ O `docker-compose.prod.yml` já referencia o `.env` automaticamente. No Easypane
 4. No campo de comando, use `IMAGE_TAG=0.0.1 docker compose -f docker-compose.prod.yml up -d`.
    - **Não use `--build`** (as imagens já estão construídas no GHCR).
    - Se a configuração do Easypanel não permitir remover `--build`, adicione um `.dockerignore` ou ignore o erro se apenas imagens forem puxadas.
+   - Se receber `Head "https://ghcr.io/...": denied`, confirme o login (passo 2) e que a tag existe: `docker pull ghcr.io/85dyones/motogestor-v2-users:${IMAGE_TAG:-0.0.1}`.
 5. Para aplicar migrations antes de subir os serviços, rode manualmente:
    ```
    docker compose -f docker-compose.prod.yml run --rm users-service flask db upgrade
@@ -189,6 +190,7 @@ Antes de fazer deploy no Easypanel, teste o `docker-compose.prod.yml` localmente
 **Erro de permissão no GHCR**
 - Confirme que seu PAT tem escopo `read:packages` (imagens privadas) ou `public_repo` (se público).
 - Use `docker login ghcr.io` novamente se o token expirou.
+- Valide que a variável `IMAGE_TAG` aponta para uma tag publicada (ex.: `0.0.1`) e que o nome da imagem está correto para cada serviço (`motogestor-v2-<service>`).
 
 ## Fazendo deploy no Easypanel
 
