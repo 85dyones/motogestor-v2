@@ -9,9 +9,10 @@ Este guia assume que você já criou o projeto no Easypanel e que o repositório
   - Evita erros de build remoto e é mais rápido para deploy.
   - Não requer que os Dockerfiles estejam no servidor.
 
-- **`docker-compose.yml`** (desenvolvimento)
-  - Usa `build:` para construir imagens localmente.
-  - Use apenas localmente na máquina de desenvolvimento.
+- **`docker-compose.yml`** (fallback/local)
+  - Usa `build:` para construir imagens localmente caso o pull do GHCR não seja possível.
+  - Use apenas localmente ou como plano B na VPS se você não tiver acesso às imagens do GHCR.
+  - Se você ainda tiver arquivos antigos `docker-compose.easypanel*.yml` no servidor, remova-os para evitar referências inválidas como `*image_tag`.
 
 ## Variáveis de ambiente
 Crie um arquivo `.env` na raiz do repositório com pelo menos:
@@ -203,3 +204,5 @@ Após testar localmente e confirmar que tudo funciona:
 5. Habilite "Recreate containers on redeploy" para garantir que novas imagens sejam puxadas.
 6. Clique em "Deploy" ou "Atualizar".
 7. Monitore os logs no painel por 2–5 minutos até que todos os serviços estejam saudáveis.
+
+> Para um passo a passo detalhado na VPS/Hostinger, incluindo fallback sem GHCR, consulte `docs/hostinger-vps-deploy.md`.
