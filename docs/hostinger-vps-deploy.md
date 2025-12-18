@@ -68,5 +68,13 @@ docker compose -f docker-compose.yml --env-file .env.local run --rm teamcrm-serv
 - Marque “Recreate containers on deploy” para forçar o uso da tag configurada.
 - Confirme que o comando de deploy utiliza `docker-compose.prod.yml` e não inclui `--build`.
 - Para trocar a tag, altere `IMAGE_TAG` no painel ou exporte no comando de deploy.
+- Se você quiser usar o script, rode (via SSH ou tarefa no painel):
+  ```bash
+  GHCR_USERNAME=<usuario> GHCR_TOKEN=<pat-read:packages> IMAGE_TAG=0.0.1 ./deploy_staging.sh
+  ```
+  E, se o GHCR estiver bloqueado, force o plano B (build local):
+  ```bash
+  USE_LOCAL_BUILD=1 ./deploy_staging.sh
+  ```
 
 Seguindo estes passos, você terá um caminho suportado (puxando do GHCR) e um plano B (build local) para rodar o MotoGestor v2 na VPS ou no Easypanel.

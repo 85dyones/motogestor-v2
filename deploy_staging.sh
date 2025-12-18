@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-COMPOSE_FILE="docker-compose.prod.yml"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 ENV_FILE=".env"
-PROJECT_NAME="motogestor-staging"
+PROJECT_NAME="${COMPOSE_PROJECT_NAME:-motogestor-staging}"
 SERVICES_WITH_MIGRATIONS=(users-service management-service financial-service teamcrm-service)
 GHCR_USERNAME=${GHCR_USERNAME:-}
 GHCR_TOKEN=${GHCR_TOKEN:-}
+USE_LOCAL_BUILD=${USE_LOCAL_BUILD:-0}  # quando 1, usa docker-compose.yml e builda localmente (fallback se GHCR negar acesso)
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "[deploy] Arquivo ${ENV_FILE} não encontrado. Crie-o antes do deploy." >&2
@@ -23,15 +24,27 @@ export COMPOSE_PROJECT_NAME="${PROJECT_NAME}"
 
 compose_cmd=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}")
 
-if [[ -n "${GHCR_USERNAME}" && -n "${GHCR_TOKEN}" ]]; then
-  echo "[deploy] Autenticando no GHCR como ${GHCR_USERNAME}..."
-  echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
-else
-  echo "[deploy] GHCR_USERNAME/GHCR_TOKEN não definidos; tentando pull anônimo (garanta permissão pública ou configure o login)." >&2
+# Quando o GHCR está indisponível ou privado, permitir fallback para build local usando docker-compose.yml
+if [[ "${USE_LOCAL_BUILD}" == "1" ]]; then
+  echo "[deploy] USE_LOCAL_BUILD=1 → usando docker-compose.yml e build local (sem GHCR)."
+  COMPOSE_FILE="docker-compose.yml"
+  compose_cmd=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}")
 fi
 
-echo "[deploy] Pulling imagens 0.0.1 do GHCR..."
-"${compose_cmd[@]}" pull postgres redis users-service management-service financial-service teamcrm-service ai-service api-gateway
+if [[ "${USE_LOCAL_BUILD}" != "1" ]]; then
+  if [[ -n "${GHCR_USERNAME}" && -n "${GHCR_TOKEN}" ]]; then
+    echo "[deploy] Autenticando no GHCR como ${GHCR_USERNAME}..."
+    echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
+  else
+    echo "[deploy] GHCR_USERNAME/GHCR_TOKEN não definidos; tentando pull anônimo (garanta permissão pública ou configure o login)." >&2
+  fi
+
+  echo "[deploy] Pulling imagens ${IMAGE_TAG:-0.0.1} do GHCR..."
+  "${compose_cmd[@]}" pull postgres redis users-service management-service financial-service teamcrm-service ai-service api-gateway
+else
+  echo "[deploy] Pulando pull do GHCR (USE_LOCAL_BUILD=1). Construindo localmente quando necessário..."
+  "${compose_cmd[@]}" build
+fi
 
 echo "[deploy] Subindo postgres/redis em background..."
 "${compose_cmd[@]}" up -d postgres redis
