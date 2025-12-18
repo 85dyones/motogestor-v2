@@ -13,9 +13,9 @@ docker push ghcr.io/85dyones/motogestor-v2-users:latest
 # repetir para api-gateway, management-service, financial-service, teamcrm-service, ai-service
 ```
 
-2. No repositório, há um arquivo `docker-compose.easypanel.yml` com placeholders `ghcr.io/...`. Substitua as tags por aquelas publicadas (ou use `:vX.Y.Z`).
+2. No repositório, use o arquivo `docker-compose.prod.yml` com as imagens `ghcr.io/...`. Use `IMAGE_TAG=latest` (ou outra versão publicada) ao fazer o deploy.
 
-3. No Easypanel crie uma nova stack usando o arquivo `docker-compose.easypanel.yml` e configure variáveis de ambiente / secrets na UI.
+3. No Easypanel crie uma nova stack apontando para `docker-compose.prod.yml` e configure variáveis de ambiente / secrets na UI.
 
 4. Se preferir DB gerenciado, não inclua `postgres` no compose e configure `DATABASE_URL` apontando para o DB externo.
 
@@ -77,4 +77,3 @@ Se quiser rodar os testes de integração localmente (antes do CI):
 		 docker run -d --name pg-test -e POSTGRES_USER=motogestor -e POSTGRES_PASSWORD=motogestor_pwd -e POSTGRES_DB=motogestor_integration -p 5432:5432 postgres:15
 
 	 - e então rode os mesmos comandos de export e pytest do passo anterior.
-

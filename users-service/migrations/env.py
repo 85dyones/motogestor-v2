@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
-from app.config import load_config
-from app.models import Tenant, User, db  # noqa: F401
 from sqlalchemy import engine_from_config, pool
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from app.models import Tenant, User, db  # noqa: E402, F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -15,12 +19,22 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-cfg = load_config()
 target_metadata = db.metadata
 
 
 def get_url():
-    return os.getenv("DATABASE_URL", cfg.database_url)
+    # Prefer the explicit DATABASE_URL provided by CI/workflows. Fall back to
+    # a safe local default without requiring the full application config so
+    # migrations can run even when production-only env vars are absent.
+    url = os.getenv("DATABASE_URL")
+    if url:
+        return url
+
+    user = os.getenv("POSTGRES_USER", "postgres")
+    password = os.getenv("POSTGRES_PASSWORD", "postgres")
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    name = os.getenv("POSTGRES_DB", "motogestor_dev")
+    return f"postgresql+psycopg2://{user}:{password}@{host}:5432/{name}"
 
 
 def run_migrations_offline():

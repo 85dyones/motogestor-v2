@@ -27,4 +27,5 @@ class AuthUser(BaseModel):
 
 class AuthResponse(BaseModel):
     access_token: str
+    refresh_token: str | None = None
     user: AuthUser

@@ -3,5 +3,12 @@ gunicorn
 flask-jwt-extended
 flask-sqlalchemy
 psycopg2-binary
+alembic==1.13.2
 python-dotenv
 pytest
+prometheus-flask-exporter==0.23.0
+prometheus-client==0.20.0
+opentelemetry-sdk==1.25.0
+opentelemetry-exporter-otlp==1.25.0
+opentelemetry-instrumentation-flask==0.46b0
+opentelemetry-instrumentation-requests==0.46b0

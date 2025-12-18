@@ -2,20 +2,17 @@
 
 Este guia assume que você já criou o projeto no Easypanel e que o repositório foi clonado na VPS. Ele usa o `docker-compose.prod.yml` (otimizado com imagens do GHCR) para evitar problemas de build remoto.
 
-## ⚠️ Importante: Qual arquivo Docker Compose usar?
+## ⚠️ Qual arquivo Docker Compose usar?
 
 - **`docker-compose.prod.yml`** ← **Use este arquivo no Easypanel**
-  - Usa imagens pré-construídas do GHCR (recomendado para production e Easypanel).
+  - Usa imagens pré-construídas do GHCR (recomendado para production e Easypanel). Defina `IMAGE_TAG` (padrão `latest`) para apontar para a tag publicada.
   - Evita erros de build remoto e é mais rápido para deploy.
   - Não requer que os Dockerfiles estejam no servidor.
 
-- **`docker-compose.yml`** (desenvolvimento)
-  - Usa `build:` para construir imagens localmente.
-  - Use apenas localmente na máquina de desenvolvimento.
-
-- **`docker-compose.easypanel.yml`** (compatível, mantido para referência)
-  - Equivalente ao `docker-compose.prod.yml`, usa imagens GHCR.
-  - Pode ser usado alternativamente, mas `prod.yml` é a versão principal.
+- **`docker-compose.yml`** (fallback/local)
+  - Usa `build:` para construir imagens localmente caso o pull do GHCR não seja possível.
+  - Use apenas localmente ou como plano B na VPS se você não tiver acesso às imagens do GHCR.
+  - Se você ainda tiver arquivos antigos `docker-compose.easypanel*.yml` no servidor, remova-os para evitar referências inválidas como `*image_tag`.
 
 ## Variáveis de ambiente
 Crie um arquivo `.env` na raiz do repositório com pelo menos:
@@ -26,17 +23,28 @@ POSTGRES_PASSWORD=troque-esta-senha
 POSTGRES_DB=motogestor
 JWT_SECRET_KEY=troque-esta-chave
 LOG_LEVEL=INFO
+GHCR_USERNAME=seu-usuario-gh
+GHCR_TOKEN=token-com-read:packages
+IMAGE_TAG=latest
 ```
 
 O `docker-compose.prod.yml` já referencia o `.env` automaticamente. No Easypanel, você pode cadastrar as mesmas variáveis na interface de ambiente para sobrescrever valores sem editar o arquivo.
 
 ## Passos de deploy
 1. Garanta que o Docker e o Docker Compose estão instalados na VPS (Easypanel já traz Docker).
-2. Faça login no painel e crie um projeto que rode um comando customizado (via "Docker Compose App").
-3. No campo de comando, use `docker compose -f docker-compose.prod.yml up -d`.
+2. **Autentique no GHCR se as imagens forem privadas** (evita o erro `Head "https://ghcr.io/...": denied`):
+   ```bash
+   docker login ghcr.io -u <github-username> -p <token-com-read:packages>
+   ```
+   - O token precisa do escopo `read:packages`.
+   - Se estiver usando o script `deploy_staging.sh`, exporte `GHCR_USERNAME` e `GHCR_TOKEN` (ou coloque no `.env`) para ele fazer o login automaticamente.
+   - Antes de clicar em deploy, rode localmente `IMAGE_TAG=latest ./scripts/check-ghcr-images.sh` para garantir que todas as imagens são acessíveis com a tag escolhida.
+3. Faça login no painel e crie um projeto que rode um comando customizado (via "Docker Compose App").
+4. No campo de comando, use `IMAGE_TAG=latest docker compose -f docker-compose.prod.yml up -d`.
    - **Não use `--build`** (as imagens já estão construídas no GHCR).
    - Se a configuração do Easypanel não permitir remover `--build`, adicione um `.dockerignore` ou ignore o erro se apenas imagens forem puxadas.
-4. Para aplicar migrations antes de subir os serviços, rode manualmente:
+   - Se receber `Head "https://ghcr.io/...": denied`, confirme o login (passo 2) e que a tag existe: `docker pull ghcr.io/85dyones/motogestor-v2-users:${IMAGE_TAG:-latest}`.
+5. Para aplicar migrations antes de subir os serviços, rode manualmente:
    ```
    docker compose -f docker-compose.prod.yml run --rm users-service flask db upgrade
    ```
@@ -80,7 +88,7 @@ Se preferir que o Easypanel faça o clone direto do GitHub (com atualizações c
 
 ## Testando o deploy localmente (pré-deployment)
 
-Antes de fazer deploy no Easypanel, teste o `docker-compose.easypanel.yml` localmente com imagens do GHCR:
+Antes de fazer deploy no Easypanel, teste o `docker-compose.prod.yml` localmente com imagens do GHCR:
 
 ### Pré-requisitos
 - Docker e Docker Compose instalados localmente.
@@ -117,17 +125,17 @@ Antes de fazer deploy no Easypanel, teste o `docker-compose.easypanel.yml` local
 
 4. **Validar a sintaxe do Compose:**
    ```bash
-   docker compose -f docker-compose.easypanel.yml config --env-file .env.test
+   docker compose -f docker-compose.prod.yml config --env-file .env.test
    ```
 
 5. **Iniciar os containers em background:**
    ```bash
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test up -d
+   IMAGE_TAG=latest docker compose -f docker-compose.prod.yml --env-file .env.test up -d
    ```
 
 6. **Verificar o status dos containers:**
    ```bash
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test ps
+   docker compose -f docker-compose.prod.yml --env-file .env.test ps
    # Todos devem estar como "healthy" ou "running" após alguns segundos
    ```
 
@@ -137,26 +145,26 @@ Antes de fazer deploy no Easypanel, teste o `docker-compose.easypanel.yml` local
    curl http://localhost/health
 
    # Health check do users-service (acesso direto)
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test exec users-service \
+   docker compose -f docker-compose.prod.yml --env-file .env.test exec users-service \
      curl -s http://localhost:5000/health
 
    # Listar bancos de dados Postgres
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test exec postgres \
+   docker compose -f docker-compose.prod.yml --env-file .env.test exec postgres \
      psql -U motogestor_test -d motogestor_test -c "\dt"
    ```
 
 8. **Verificar logs se houver erros:**
    ```bash
    # Logs de um serviço específico
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test logs -f api-gateway
+   docker compose -f docker-compose.prod.yml --env-file .env.test logs -f api-gateway
 
    # Logs de todos os serviços
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test logs -f
+   docker compose -f docker-compose.prod.yml --env-file .env.test logs -f
    ```
 
 9. **Parar e remover containers:**
    ```bash
-   docker compose -f docker-compose.easypanel.yml --env-file .env.test down -v
+   docker compose -f docker-compose.prod.yml --env-file .env.test down -v
    # A flag `-v` remove também os volumes (dados do banco)
    ```
 
@@ -173,8 +181,8 @@ Antes de fazer deploy no Easypanel, teste o `docker-compose.easypanel.yml` local
 ### Troubleshooting Comum
 
 **Erro: "image not found"**
-- Verifique se as imagens `ghcr.io/85dyones/motogestor-v2-*:0.0.1` foram publicadas no GHCR.
-- Execute `docker pull ghcr.io/85dyones/motogestor-v2-users:0.0.1` para testar acesso.
+- Verifique se as imagens `ghcr.io/85dyones/motogestor-v2-*:latest` (ou a versão escolhida) foram publicadas no GHCR.
+- Execute `docker pull ghcr.io/85dyones/motogestor-v2-users:latest` para testar acesso.
 
 **Erro: "connection refused" entre serviços**
 - Verifique se a rede do compose está correta: `docker network ls | grep motogestor`
@@ -187,6 +195,7 @@ Antes de fazer deploy no Easypanel, teste o `docker-compose.easypanel.yml` local
 **Erro de permissão no GHCR**
 - Confirme que seu PAT tem escopo `read:packages` (imagens privadas) ou `public_repo` (se público).
 - Use `docker login ghcr.io` novamente se o token expirou.
+- Valide que a variável `IMAGE_TAG` aponta para uma tag publicada (ex.: `latest` ou uma versão) e que o nome da imagem está correto para cada serviço (`motogestor-v2-<service>`).
 
 ## Fazendo deploy no Easypanel
 
@@ -194,8 +203,10 @@ Após testar localmente e confirmar que tudo funciona:
 
 1. Entre no painel Easypanel/Hostinger.
 2. Crie um novo "Docker Compose App" ou atualize um existente.
-3. Cole o conteúdo de `docker-compose.easypanel.yml` ou aponte para a URL do repositório.
+3. Cole o conteúdo de `docker-compose.prod.yml` ou aponte para a URL do repositório.
 4. Configure as variáveis de ambiente conforme seção "[Variáveis de ambiente](#variáveis-de-ambiente)" acima.
 5. Habilite "Recreate containers on redeploy" para garantir que novas imagens sejam puxadas.
 6. Clique em "Deploy" ou "Atualizar".
 7. Monitore os logs no painel por 2–5 minutos até que todos os serviços estejam saudáveis.
+
+> Para um passo a passo detalhado na VPS/Hostinger, incluindo fallback sem GHCR, consulte `docs/hostinger-vps-deploy.md`.
