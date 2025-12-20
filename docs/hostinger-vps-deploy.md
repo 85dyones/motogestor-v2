@@ -15,6 +15,7 @@ Estas instruções assumem que você já clonou o repositório na VPS. O objetiv
 2. Faça login no GHCR:
    ```bash
    echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+   # ou rode: ./scripts/ghcr-login.sh .env
    ```
 3. Valide o acesso à tag que será usada:
    ```bash

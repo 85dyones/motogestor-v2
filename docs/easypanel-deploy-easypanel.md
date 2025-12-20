@@ -6,7 +6,7 @@ Este documento complementa `docs/easypanel-deploy.md` com um fluxo recomendado p
 
 ```bash
 # Login GHCR
-echo $CR_PAT | docker login ghcr.io -u 85dyones --password-stdin
+echo $CR_PAT | docker login ghcr.io -u 85dyones --password-stdin   # ou ./scripts/ghcr-login.sh .env
 # Build e push
 docker build -t ghcr.io/85dyones/motogestor-v2-users:latest users-service
 docker push ghcr.io/85dyones/motogestor-v2-users:latest

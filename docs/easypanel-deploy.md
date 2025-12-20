@@ -35,6 +35,7 @@ O `docker-compose.prod.yml` já referencia o `.env` automaticamente. No Easypane
 2. **Autentique no GHCR se as imagens forem privadas** (evita o erro `Head "https://ghcr.io/...": denied`):
    ```bash
    docker login ghcr.io -u <github-username> -p <token-com-read:packages>
+   # ou rode: ./scripts/ghcr-login.sh .env
    ```
    - O token precisa do escopo `read:packages`.
    - Se estiver usando o script `deploy_staging.sh`, exporte `GHCR_USERNAME` e `GHCR_TOKEN` (ou coloque no `.env`) para ele fazer o login automaticamente.
@@ -180,9 +181,10 @@ Antes de fazer deploy no Easypanel, teste o `docker-compose.prod.yml` localmente
 
 ### Troubleshooting Comum
 
-**Erro: "image not found"**
-- Verifique se as imagens `ghcr.io/85dyones/motogestor-v2-*:latest` (ou a versão escolhida) foram publicadas no GHCR.
-- Execute `docker pull ghcr.io/85dyones/motogestor-v2-users:latest` para testar acesso.
+**Erro: "image not found" ou `denied` no GHCR**
+- Confirme que as imagens foram **publicadas com a tag `latest`** ou a tag que você setou em `IMAGE_TAG`.
+- Rode o preflight: `IMAGE_TAG=latest GHCR_USERNAME=... GHCR_TOKEN=... ./scripts/check-ghcr-images.sh`.
+- Se privado, faça login antes do deploy: `./scripts/ghcr-login.sh .env` (ou configure o Registry no Easypanel com o mesmo usuário/token).
 
 **Erro: "connection refused" entre serviços**
 - Verifique se a rede do compose está correta: `docker network ls | grep motogestor`
