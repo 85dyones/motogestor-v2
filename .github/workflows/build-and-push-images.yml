@@ -4,13 +4,16 @@ on:
   push:
     tags:
       - "v*.*.*"
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "GHCR tag to publish (ex: 0.0.1)"
+        required: true
+        default: "0.0.1"
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_BASE: ${{ github.repository }}
+  IMAGE_NAMESPACE: 85dyones
 
 jobs:
   build:
@@ -22,17 +25,17 @@ jobs:
     strategy:
       matrix:
         service:
-          - name: users-service
+          - name: motogestor-v2-users
             path: ./users-service
-          - name: api-gateway
+          - name: motogestor-v2-gateway
             path: ./api-gateway
-          - name: management-service
+          - name: motogestor-v2-management
             path: ./management-service
-          - name: financial-service
+          - name: motogestor-v2-financial
             path: ./financial-service
-          - name: teamcrm-service
+          - name: motogestor-v2-teamcrm
             path: ./teamcrm-service
-          - name: ai-service
+          - name: motogestor-v2-ai
             path: ./ai-service
 
     steps:
@@ -50,23 +53,23 @@ jobs:
           # Try a user-provided PAT first (GHCR_PAT). Fall back to GITHUB_TOKEN when available.
           password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}-${{ matrix.service.name }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Resolve image tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG="${GITHUB_REF_NAME#v}"
+          else
+            TAG="${{ inputs.image_tag }}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push ${{ matrix.service.name }}
         uses: docker/build-push-action@v4
         with:
           context: ${{ matrix.service.path }}
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.tag.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
