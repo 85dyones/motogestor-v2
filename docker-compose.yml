@@ -1,78 +1,170 @@
 services:
   postgres:
-    image: postgres:15
-    container_name: motogestor-postgres
+    image: postgres:17
+    restart: always
     env_file:
       - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - motogestor_postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - motogestor-net
+      - pgdata-prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-motogestor} -d ${POSTGRES_DB:-motogestor_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7
-    container_name: motogestor-redis
-    env_file:
-      - .env
-    command: ["redis-server", "--save", "20", "1", "--loglevel", "warning"]
+    restart: always
+    command: ["redis-server", "--save", "60", "1000", "--loglevel", "warning"]
     volumes:
-      - motogestor_redis_data:/data
-    ports:
-      - "6379:6379"
-    networks:
-      - motogestor-net
+      - redisdata-prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   users-service:
-    build:
-      context: ./users-service
-    container_name: motogestor-users
+    image: ghcr.io/85dyones/motogestor-v2-users:0.0.1
+    restart: always
     env_file:
       - .env
     environment:
-      APP_ENV: ${APP_ENV:-development}
-      # Se quiser sobrescrever a URL inteira, set DATABASE_URL no .env
-      DATABASE_URL: ${DATABASE_URL:-}
+      APP_ENV: production
+      LOG_LEVEL: INFO
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     depends_on:
-      - postgres
-    ports:
-      - "5001:5001"
-    networks:
-      - motogestor-net
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - |
+          python - << 'PY'
+          import urllib.request, sys
+          for port in (5000, 5001):
+              try:
+                  with urllib.request.urlopen(f"http://localhost:{port}/health", timeout=3) as r:
+                      sys.exit(0 if r.status == 200 else 1)
+              except Exception:
+                  pass
+          sys.exit(1)
+          PY
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  management-service:
+    image: ghcr.io/85dyones/motogestor-v2-management:0.0.1
+    restart: always
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      LOG_LEVEL: INFO
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  financial-service:
+    image: ghcr.io/85dyones/motogestor-v2-financial:0.0.1
+    restart: always
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      LOG_LEVEL: INFO
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  teamcrm-service:
+    image: ghcr.io/85dyones/motogestor-v2-teamcrm:0.0.1
+    restart: always
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      LOG_LEVEL: INFO
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ai-service:
+    image: ghcr.io/85dyones/motogestor-v2-ai:0.0.1
+    restart: always
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      LOG_LEVEL: INFO
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      users-service:
+        condition: service_healthy
 
   api-gateway:
-    build:
-      context: .
-      dockerfile: api-gateway/Dockerfile
-    container_name: motogestor-gateway
+    image: ghcr.io/85dyones/motogestor-v2-gateway:0.0.3
+    restart: always
     env_file:
       - .env
     environment:
-      APP_ENV: ${APP_ENV:-development}
+      APP_ENV: production
+      LOG_LEVEL: INFO
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      USERS_SERVICE_URL: http://users-service:5001
-      MANAGEMENT_SERVICE_URL: http://management-service:5002
-      FINANCIAL_SERVICE_URL: http://financial-service:5003
-      TEAMCRM_SERVICE_URL: http://teamcrm-service:5004
-      AI_SERVICE_URL: http://ai-service:5005
       FRONTEND_DIST_PATH: /app/frontend/dist
+      USERS_SERVICE_URL: http://users-service:5000
+      MANAGEMENT_SERVICE_URL: http://management-service:5000
+      FINANCIAL_SERVICE_URL: http://financial-service:5000
+      TEAMCRM_SERVICE_URL: http://teamcrm-service:5000
+      AI_SERVICE_URL: http://ai-service:5000
     depends_on:
-      - users-service
-    ports:
-      - "8080:5000"
-    networks:
-      - motogestor-net
-
-networks:
-  motogestor-net:
-    driver: bridge
+      users-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - |
+          python - << 'PY'
+          import urllib.request, sys
+          try:
+              with urllib.request.urlopen("http://localhost:5000/health", timeout=3) as r:
+                  sys.exit(0 if r.status == 200 else 1)
+          except Exception:
+              sys.exit(1)
+          PY
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
 volumes:
-  motogestor_postgres_data:
-  motogestor_redis_data:
+  pgdata-prod:
+  redisdata-prod:

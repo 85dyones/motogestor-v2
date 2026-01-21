@@ -24,16 +24,25 @@ def create_app():
     app.config["JWT_SECRET_KEY"] = cfg.jwt_secret_key
     app.config["ENV"] = cfg.app_env
 
-    # CORS liberado pro frontend (ajusta depois se quiser fechar)
+    # CORS (ajuste depois se quiser restringir)
     CORS(app, supports_credentials=True)
 
-    jwt = JWTManager(app)  # noqa: F841
+    JWTManager(app)  # noqa: F841
 
-    # Blueprints de proxy
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(services_bp)
+    # -------------------------
+    # API SEMPRE em /api/*
+    # -------------------------
+    # Seus blueprints já expõem /auth e etc.
+    # Aqui a gente prefixa tudo com /api, ficando /api/auth, /api/users, etc.
+    app.register_blueprint(auth_bp, url_prefix="/api")
+    app.register_blueprint(services_bp, url_prefix="/api")
 
-    @app.route("/health")
+    @app.route("/api/health", methods=["GET"])
+    def api_health():
+        return {"status": "ok", "service": "api-gateway"}, 200
+
+    # Mantém /health também (útil para healthcheck interno e compat)
+    @app.route("/health", methods=["GET"])
     def health():
         return {"status": "ok", "service": "api-gateway"}, 200
 
@@ -93,7 +102,7 @@ def create_app():
         ],
     }
 
-    @app.route("/tenant/theme")
+    @app.route("/api/tenant/theme", methods=["GET"])
     @jwt_required()
     def tenant_theme():
         """
@@ -115,9 +124,8 @@ def create_app():
 
         themes_for_plan = BASE_THEMES.get(plan, BASE_THEMES["BASIC"])
 
-        # Aqui, em uma versão futura, você pode buscar do banco (users-service / tenant-settings)
-        # uma paleta customizada para esse tenant_id, se existir.
-        custom_palette = None  # placeholder para o futuro
+        # Placeholder para futuro (ex: buscar paleta customizada por tenant_id)
+        custom_palette = None
 
         return jsonify(
             {
@@ -135,7 +143,7 @@ def create_app():
 
     # ---------- Overview simples agregando serviços ----------
 
-    @app.route("/overview")
+    @app.route("/api/overview", methods=["GET"])
     @jwt_required()
     def overview():
         """
@@ -202,9 +210,7 @@ def create_app():
             )
             if resp_tasks.ok:
                 tasks = resp_tasks.json()
-                summary["tasks"] = {
-                    "open_count": len(tasks),
-                }
+                summary["tasks"] = {"open_count": len(tasks)}
             else:
                 summary["tasks"] = {"error": resp_tasks.status_code}
         except Exception:
@@ -212,12 +218,20 @@ def create_app():
 
         return jsonify(summary)
 
-    # ---------- Frontend estático (React/Vite) ----------
-
+    # -------------------------
+    # Frontend estático (SPA)
+    # -------------------------
     app.config["FRONTEND_DIST_PATH"] = cfg.frontend_dist_path
 
-    @app.route("/", defaults={"path": ""})
-    @app.route("/<path:path>")
+    # Importante: nunca deixe a SPA "pegar" /api/*
+    @app.route("/api", defaults={"api_path": ""}, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
+    @app.route("/api/<path:api_path>", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
+    def api_not_found(api_path: str):
+        # Se chegou aqui, é porque não existe rota de API correspondente
+        return jsonify({"error": "api_route_not_found", "path": f"/api/{api_path}"}), 404
+
+    @app.route("/", defaults={"path": ""}, methods=["GET"])
+    @app.route("/<path:path>", methods=["GET"])
     def serve_frontend(path: str):
         """
         Serve arquivos estáticos do frontend.
@@ -232,12 +246,11 @@ def create_app():
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 return send_from_directory(dist_path, path)
 
-        # Tenta servir o index.html
+        # SPA fallback -> index.html
         index_path = os.path.join(dist_path, "index.html")
         if os.path.exists(index_path):
             return send_from_directory(dist_path, "index.html")
 
-        # Frontend ainda não buildado/copidado
         return jsonify({"error": "frontend_not_built"}), 500
 
     return app
