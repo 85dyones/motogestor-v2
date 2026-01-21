@@ -1,25 +1,21 @@
-FROM python:3.11-slim AS runtime
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY api-gateway/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY api-gateway/app ./app
-COPY api-gateway/wsgi.py .
+COPY app ./app
+COPY wsgi.py .
+
+# Front build (você já copia a pasta pronta)
+COPY frontend-dist ./frontend/dist
 
 ENV PORT=5000
 EXPOSE 5000
 
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} wsgi:app"]
-
-# Test target: optional stage for CI to include tests in the image (if they exist).
-FROM runtime AS test
-COPY tests ./tests
+CMD ["sh", "-c", "gunicorn wsgi:app -b 0.0.0.0:${PORT} -w 2 --threads 4 --timeout 120"]

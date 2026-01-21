@@ -24,26 +24,37 @@ def create_app():
     app.config["JWT_SECRET_KEY"] = cfg.jwt_secret_key
     app.config["ENV"] = cfg.app_env
 
-    # CORS (ajuste depois se quiser restringir)
+    # CORS liberado pro frontend (ajusta depois se quiser fechar)
     CORS(app, supports_credentials=True)
 
-    JWTManager(app)  # noqa: F841
+    JWTManager(app)
 
-    # -------------------------
-    # API SEMPRE em /api/*
-    # -------------------------
-    # Seus blueprints já expõem /auth e etc.
-    # Aqui a gente prefixa tudo com /api, ficando /api/auth, /api/users, etc.
-    app.register_blueprint(auth_bp, url_prefix="/api")
-    app.register_blueprint(services_bp, url_prefix="/api")
+    # ------------------------------------------------------------
+    # ROTAS DE API
+    #
+    # Você já tinha /auth/* e /services/* (via blueprints).
+    # Seu frontend chama /api/auth/*.
+    # Então registramos os MESMOS blueprints em /api também.
+    #
+    # IMPORTANTE: blueprint não pode ser registrado 2x com o mesmo nome,
+    # por isso usamos o parâmetro "name=".
+    # ------------------------------------------------------------
+
+    # rotas "legadas" (sem /api)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(services_bp)
+
+    # rotas oficiais com /api
+    app.register_blueprint(auth_bp, url_prefix="/api", name="auth_api")
+    app.register_blueprint(services_bp, url_prefix="/api", name="services_api")
+
+    # Health (mantém /health e cria /api/health)
+    @app.route("/health", methods=["GET"])
+    def health():
+        return {"status": "ok", "service": "api-gateway"}, 200
 
     @app.route("/api/health", methods=["GET"])
     def api_health():
-        return {"status": "ok", "service": "api-gateway"}, 200
-
-    # Mantém /health também (útil para healthcheck interno e compat)
-    @app.route("/health", methods=["GET"])
-    def health():
         return {"status": "ok", "service": "api-gateway"}, 200
 
     # ---------- Tema por tenant (BASIC / PRO / ENTERPRISE) ----------
@@ -102,9 +113,7 @@ def create_app():
         ],
     }
 
-    @app.route("/api/tenant/theme", methods=["GET"])
-    @jwt_required()
-    def tenant_theme():
+    def _tenant_theme_payload():
         """
         Retorna opções de paleta para o tenant atual, baseado no plano.
         Espera que o JWT contenha algo como:
@@ -124,34 +133,34 @@ def create_app():
 
         themes_for_plan = BASE_THEMES.get(plan, BASE_THEMES["BASIC"])
 
-        # Placeholder para futuro (ex: buscar paleta customizada por tenant_id)
+        # Placeholder pra futuro: buscar palette custom do tenant em algum serviço
         custom_palette = None
 
-        return jsonify(
-            {
-                "tenant": {
-                    "id": identity.get("tenant_id"),
-                    "name": tenant_name,
-                    "plan": plan,
-                },
-                "themes": themes_for_plan,
-                "custom_palette": custom_palette,
-                "custom_allowed": plan in ("PRO", "ENTERPRISE"),
-                "custom_only_enterprise": plan == "ENTERPRISE",
-            }
-        )
+        return {
+            "tenant": {
+                "id": identity.get("tenant_id"),
+                "name": tenant_name,
+                "plan": plan,
+            },
+            "themes": themes_for_plan,
+            "custom_palette": custom_palette,
+            "custom_allowed": plan in ("PRO", "ENTERPRISE"),
+            "custom_only_enterprise": plan == "ENTERPRISE",
+        }
+
+    @app.route("/tenant/theme", methods=["GET"])
+    @jwt_required()
+    def tenant_theme():
+        return jsonify(_tenant_theme_payload())
+
+    @app.route("/api/tenant/theme", methods=["GET"])
+    @jwt_required()
+    def api_tenant_theme():
+        return jsonify(_tenant_theme_payload())
 
     # ---------- Overview simples agregando serviços ----------
 
-    @app.route("/api/overview", methods=["GET"])
-    @jwt_required()
-    def overview():
-        """
-        Agregação simples pra tela inicial:
-        - OS abertas / fechadas
-        - Recebíveis pendentes
-        - Tarefas abertas
-        """
+    def _overview_payload():
         auth_header = request.headers.get("Authorization")
         headers = {}
         if auth_header:
@@ -216,37 +225,42 @@ def create_app():
         except Exception:
             summary["tasks"] = {"error": "unavailable"}
 
-        return jsonify(summary)
+        return summary
 
-    # -------------------------
-    # Frontend estático (SPA)
-    # -------------------------
+    @app.route("/overview", methods=["GET"])
+    @jwt_required()
+    def overview():
+        return jsonify(_overview_payload())
+
+    @app.route("/api/overview", methods=["GET"])
+    @jwt_required()
+    def api_overview():
+        return jsonify(_overview_payload())
+
+    # ---------- Frontend estático (React/Vite) ----------
+
     app.config["FRONTEND_DIST_PATH"] = cfg.frontend_dist_path
 
-    # Importante: nunca deixe a SPA "pegar" /api/*
-    @app.route("/api", defaults={"api_path": ""}, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
-    @app.route("/api/<path:api_path>", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
-    def api_not_found(api_path: str):
-        # Se chegou aqui, é porque não existe rota de API correspondente
-        return jsonify({"error": "api_route_not_found", "path": f"/api/{api_path}"}), 404
-
-    @app.route("/", defaults={"path": ""}, methods=["GET"])
-    @app.route("/<path:path>", methods=["GET"])
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
     def serve_frontend(path: str):
         """
         Serve arquivos estáticos do frontend.
         Se o arquivo não existir, devolve index.html (SPA).
         Se nem index existir, responde erro de frontend não construído.
+
+        IMPORTANTE: /api/* não deve cair aqui (senão vira HTML e quebra tudo).
         """
+        if path.startswith("api/"):
+            return jsonify({"error": "api_route_not_found"}), 404
+
         dist_path = current_app.config["FRONTEND_DIST_PATH"]
 
-        # Se o caminho existir como arquivo estático, entrega direto
         if path:
             file_path = os.path.join(dist_path, path)
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 return send_from_directory(dist_path, path)
 
-        # SPA fallback -> index.html
         index_path = os.path.join(dist_path, "index.html")
         if os.path.exists(index_path):
             return send_from_directory(dist_path, "index.html")
