@@ -46,7 +46,33 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Build image (no push)
+      - name: Set up Node.js (for api-gateway frontend build)
+        if: ${{ matrix.service.name == 'api-gateway' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build frontend (for api-gateway)
+        if: ${{ matrix.service.name == 'api-gateway' }}
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build image (no push) - api-gateway
+        if: ${{ matrix.service.name == 'api-gateway' }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: api-gateway/Dockerfile
+          push: false
+          load: true
+          tags: motogestor-${{ matrix.service.name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build image (no push) - other services
+        if: ${{ matrix.service.name != 'api-gateway' }}
         uses: docker/build-push-action@v4
         with:
           context: ${{ matrix.service.path }}
@@ -60,8 +86,21 @@ jobs:
         run: |
           echo "Built context: ${{ matrix.service.path }}"
 
-      - name: Build test image (target=test)
-        if: ${{ matrix.service.has_tests == true }}
+      - name: Build test image (target=test) - api-gateway
+        if: ${{ matrix.service.has_tests == true && matrix.service.name == 'api-gateway' }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: api-gateway/Dockerfile
+          push: false
+          target: test
+          load: true
+          tags: motogestor-${{ matrix.service.name }}-test:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build test image (target=test) - other services
+        if: ${{ matrix.service.has_tests == true && matrix.service.name != 'api-gateway' }}
         uses: docker/build-push-action@v4
         with:
           context: ${{ matrix.service.path }}
@@ -121,10 +160,10 @@ jobs:
             path: ./users-service
           - name: api-gateway
             path: ./api-gateway
-              has_tests: true
+          - name: management-service
             path: ./management-service
           - name: financial-service
-              has_tests: true
+            path: ./financial-service
           - name: teamcrm-service
             path: ./teamcrm-service
           - name: ai-service
@@ -136,6 +175,19 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+
+      - name: Set up Node.js (for api-gateway frontend build)
+        if: ${{ matrix.service.name == 'api-gateway' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build frontend (for api-gateway)
+        if: ${{ matrix.service.name == 'api-gateway' }}
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
 
       - name: Ensure CR_PAT secret is set
         run: |
@@ -164,7 +216,20 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push ${{ matrix.service.name }}
+      - name: Build and push api-gateway
+        if: ${{ matrix.service.name == 'api-gateway' }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: api-gateway/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push other services
+        if: ${{ matrix.service.name != 'api-gateway' }}
         uses: docker/build-push-action@v4
         with:
           context: ${{ matrix.service.path }}
@@ -252,7 +317,8 @@ jobs:
       - name: Build api-gateway image for E2E
         uses: docker/build-push-action@v4
         with:
-          context: ./api-gateway
+          context: .
+          file: ./api-gateway/Dockerfile
           push: false
           load: true
           tags: motogestor-gateway-e2e:${{ env.E2E_TAG }}
