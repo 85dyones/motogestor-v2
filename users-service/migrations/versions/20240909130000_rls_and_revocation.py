@@ -1,7 +1,7 @@
 """Add RLS policies and token revocation table.
 
 Revision ID: 20240909130000
-Revises: 20240904115900_initial_schema
+Revises: 20240904115900
 Create Date: 2024-09-09 13:00:00
 """
 from typing import Sequence, Union
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "20240909130000"
-down_revision: Union[str, None] = "20240904115900_initial_schema"
+down_revision: Union[str, None] = "20240904115900"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -63,7 +63,7 @@ def upgrade() -> None:
         """
     )
 
-    op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON tenants, users TO motogestor_app")
+    op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON tenants, users, revoked_tokens TO motogestor_app")
 
 
 def downgrade() -> None:
